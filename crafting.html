@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donzo Militia — Crafting</title>
+<link rel="icon" href="DM_2.png">
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="page">
+<div class="pc">
+  <div class="ph">
+    <div class="phi">⚙️</div>
+    <div class="pht">
+      <div class="pt">CRAFTING</div>
+      <div class="ps">// Item crafting reference & recipes</div>
+      <div class="pv">// CONTENT COMING SOON</div>
+    </div>
+  </div>
+
+  <div class="ptabs">
+    <button class="ptab active" onclick="switchTab('weapons',this)">⚔️ Weapons</button>
+    <button class="ptab" onclick="switchTab('ammo',this)">🔫 Ammo</button>
+    <button class="ptab" onclick="switchTab('armor',this)">🛡️ Armor</button>
+    <button class="ptab" onclick="switchTab('explosives',this)">💣 Explosives</button>
+    <button class="ptab" onclick="switchTab('supplies',this)">🎒 Supplies</button>
+    <button class="ptab" onclick="switchTab('vehicles',this)">🚗 Vehicles</button>
+  </div>
+
+  <div class="tabpanel active" id="tab-weapons">
+    <div class="psec">
+      <div class="sttl"><span>⚔️</span> Weapons</div>
+      <!-- ═══════════════════════════════════════════════════
+           WEAPONS CONTENT — Add cards and tables below here
+           
+           Example card:
+           <div class="grid">
+             <div class="card">
+               <span class="cico">🔫</span>
+               <div class="cttl">PISTOL MK II</div>
+               <div class="cbdy">Materials: Pistol ×1, Components ×3<br>Cost: $10,000<br>Location: Bunker</div>
+             </div>
+           </div>
+           ═══════════════════════════════════════════════════ -->
+      <div class="cs"><div class="csico">⚔️</div><div class="csttl">WEAPONS CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-weapons</div></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-ammo">
+    <div class="psec">
+      <div class="sttl"><span>🔫</span> Ammunition</div>
+      <!-- AMMO CONTENT HERE -->
+      <div class="cs"><div class="csico">🔫</div><div class="csttl">AMMO CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-ammo</div></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-armor">
+    <div class="psec">
+      <div class="sttl"><span>🛡️</span> Armor & Protection</div>
+      <!-- ARMOR CONTENT HERE -->
+      <div class="cs"><div class="csico">🛡️</div><div class="csttl">ARMOR CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-armor</div></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-explosives">
+    <div class="psec">
+      <div class="sttl"><span>💣</span> Explosives & Throwables</div>
+      <!-- EXPLOSIVES CONTENT HERE -->
+      <div class="cs"><div class="csico">💣</div><div class="csttl">EXPLOSIVES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-explosives</div></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-supplies">
+    <div class="psec">
+      <div class="sttl"><span>🎒</span> Supplies & Consumables</div>
+      <!-- SUPPLIES CONTENT HERE -->
+      <div class="cs"><div class="csico">🎒</div><div class="csttl">SUPPLIES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-supplies</div></div>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-vehicles">
+    <div class="psec">
+      <div class="sttl"><span>🚗</span> Vehicles & Mods</div>
+      <!-- VEHICLES CONTENT HERE -->
+      <div class="cs"><div class="csico">🚗</div><div class="csttl">VEHICLES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-vehicles</div></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  if (!isConfigured()){location.href='setup.html';}else{initFirebase();DM.nav.init();}
+  function switchTab(name,btn){
+    document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+name).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
