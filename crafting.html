@@ -8,99 +8,252 @@
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/pages.css">
 </head>
-<body class="page">
-<div class="pc">
-  <div class="ph">
-    <div class="phi">⚙️</div>
-    <div class="pht">
-      <div class="pt">CRAFTING</div>
-      <div class="ps">// Item crafting reference & recipes</div>
-      <div class="pv">// CONTENT COMING SOON</div>
+<body class="page-body">
+
+<!-- Nav injected by nav.js -->
+
+<div class="page-container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header-icon">⚙️</div>
+    <div class="page-header-text">
+      <div class="page-title">CRAFTING</div>
+      <div class="page-subtitle">// Item crafting reference & recipes</div>
+      <div class="page-version">// CONTENT COMING SOON</div>
     </div>
   </div>
 
-  <div class="ptabs">
-    <button class="ptab active" onclick="switchTab('weapons',this)">⚔️ Weapons</button>
-    <button class="ptab" onclick="switchTab('ammo',this)">🔫 Ammo</button>
-    <button class="ptab" onclick="switchTab('armor',this)">🛡️ Armor</button>
-    <button class="ptab" onclick="switchTab('explosives',this)">💣 Explosives</button>
-    <button class="ptab" onclick="switchTab('supplies',this)">🎒 Supplies</button>
-    <button class="ptab" onclick="switchTab('vehicles',this)">🚗 Vehicles</button>
+  <!-- CATEGORY TABS -->
+  <div class="page-tabs" id="crafting-tabs">
+    <button class="page-tab active" onclick="switchTab('weapons',this)">⚔️ Weapons</button>
+    <button class="page-tab" onclick="switchTab('ammo',this)">🔫 Ammo</button>
+    <button class="page-tab" onclick="switchTab('armor',this)">🛡️ Armor</button>
+    <button class="page-tab" onclick="switchTab('explosives',this)">💣 Explosives</button>
+    <button class="page-tab" onclick="switchTab('supplies',this)">🎒 Supplies</button>
+    <button class="page-tab" onclick="switchTab('vehicles',this)">🚗 Vehicles</button>
   </div>
 
-  <div class="tabpanel active" id="tab-weapons">
-    <div class="psec">
-      <div class="sttl"><span>⚔️</span> Weapons</div>
-      <!-- ═══════════════════════════════════════════════════
-           WEAPONS CONTENT — Add cards and tables below here
+  <!-- ── WEAPONS TAB ────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-weapons">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">⚔️</span> Weapons
+      </div>
+
+      <div class="tip-box">
+        <span class="tip-icon">📋</span>
+        <div class="tip-text">
+          This section will contain crafting recipes and requirements for all weapons
+          available to Donzo Militia members. Add your content below by editing
+          <code style="color:var(--dm-green-light);font-family:var(--font-mono);">crafting.html</code>.
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────────────
+           WEAPONS CONTENT GOES HERE
            
-           Example card:
-           <div class="grid">
+           EXAMPLE CARD STRUCTURE:
+           
+           <div class="content-grid">
              <div class="card">
-               <span class="cico">🔫</span>
-               <div class="cttl">PISTOL MK II</div>
-               <div class="cbdy">Materials: Pistol ×1, Components ×3<br>Cost: $10,000<br>Location: Bunker</div>
+               <span class="card-icon">🔫</span>
+               <div class="card-title">PISTOL MK II</div>
+               <div class="card-body">
+                 <p>Required materials:</p>
+                 <ul>
+                   <li>Pistol × 1</li>
+                   <li>Weapon Components × 3</li>
+                   <li>$10,000 cash</li>
+                 </ul>
+                 <p>Location: Bunker / MOC</p>
+               </div>
              </div>
            </div>
-           ═══════════════════════════════════════════════════ -->
-      <div class="cs"><div class="csico">⚔️</div><div class="csttl">WEAPONS CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-weapons</div></div>
+           ───────────────────────────────────────────────────── -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">⚔️</div>
+        <div class="coming-soon-title">WEAPONS CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-weapons to add recipes</div>
+      </div>
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-ammo">
-    <div class="psec">
-      <div class="sttl"><span>🔫</span> Ammunition</div>
-      <!-- AMMO CONTENT HERE -->
-      <div class="cs"><div class="csico">🔫</div><div class="csttl">AMMO CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-ammo</div></div>
+  <!-- ── AMMO TAB ───────────────────────────────────── -->
+  <div class="tab-panel" id="tab-ammo">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">🔫</span> Ammunition
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           AMMO CONTENT GOES HERE
+           
+           EXAMPLE TABLE STRUCTURE:
+           
+           <table class="info-table">
+             <thead>
+               <tr>
+                 <th>Ammo Type</th>
+                 <th>Materials</th>
+                 <th>Cost</th>
+                 <th>Location</th>
+               </tr>
+             </thead>
+             <tbody>
+               <tr>
+                 <td>Hollow Point</td>
+                 <td>Gun Powder × 2</td>
+                 <td>$500</td>
+                 <td>Bunker</td>
+               </tr>
+             </tbody>
+           </table>
+           ───────────────────────────────────────────── -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">🔫</div>
+        <div class="coming-soon-title">AMMO CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-ammo to add recipes</div>
+      </div>
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-armor">
-    <div class="psec">
-      <div class="sttl"><span>🛡️</span> Armor & Protection</div>
-      <!-- ARMOR CONTENT HERE -->
-      <div class="cs"><div class="csico">🛡️</div><div class="csttl">ARMOR CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-armor</div></div>
+  <!-- ── ARMOR TAB ──────────────────────────────────── -->
+  <div class="tab-panel" id="tab-armor">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">🛡️</span> Armor & Protection
+      </div>
+
+      <!-- ARMOR CONTENT GOES HERE -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">🛡️</div>
+        <div class="coming-soon-title">ARMOR CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-armor to add recipes</div>
+      </div>
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-explosives">
-    <div class="psec">
-      <div class="sttl"><span>💣</span> Explosives & Throwables</div>
-      <!-- EXPLOSIVES CONTENT HERE -->
-      <div class="cs"><div class="csico">💣</div><div class="csttl">EXPLOSIVES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-explosives</div></div>
+  <!-- ── EXPLOSIVES TAB ─────────────────────────────── -->
+  <div class="tab-panel" id="tab-explosives">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">💣</span> Explosives & Throwables
+      </div>
+
+      <!-- EXPLOSIVES CONTENT GOES HERE -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">💣</div>
+        <div class="coming-soon-title">EXPLOSIVES CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-explosives to add recipes</div>
+      </div>
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-supplies">
-    <div class="psec">
-      <div class="sttl"><span>🎒</span> Supplies & Consumables</div>
-      <!-- SUPPLIES CONTENT HERE -->
-      <div class="cs"><div class="csico">🎒</div><div class="csttl">SUPPLIES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-supplies</div></div>
+  <!-- ── SUPPLIES TAB ───────────────────────────────── -->
+  <div class="tab-panel" id="tab-supplies">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">🎒</span> Supplies & Consumables
+      </div>
+
+      <!-- SUPPLIES CONTENT GOES HERE -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">🎒</div>
+        <div class="coming-soon-title">SUPPLIES CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-supplies to add recipes</div>
+      </div>
     </div>
   </div>
 
-  <div class="tabpanel" id="tab-vehicles">
-    <div class="psec">
-      <div class="sttl"><span>🚗</span> Vehicles & Mods</div>
-      <!-- VEHICLES CONTENT HERE -->
-      <div class="cs"><div class="csico">🚗</div><div class="csttl">VEHICLES CONTENT PENDING</div><div class="cstxt">// Edit crafting.html → #tab-vehicles</div></div>
+  <!-- ── VEHICLES TAB ───────────────────────────────── -->
+  <div class="tab-panel" id="tab-vehicles">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">🚗</span> Vehicles & Mods
+      </div>
+
+      <!-- VEHICLES CONTENT GOES HERE -->
+
+      <div class="coming-soon-section">
+        <div class="coming-soon-icon">🚗</div>
+        <div class="coming-soon-title">VEHICLES CONTENT PENDING</div>
+        <div class="coming-soon-text">// Edit crafting.html → #tab-vehicles to add recipes</div>
+      </div>
     </div>
   </div>
-</div>
 
+  <!-- HOW TO ADD CONTENT - visible to Commanders only (JS controlled) -->
+  <div id="editor-guide" class="hidden">
+    <div class="page-section">
+      <div class="section-title">
+        <span class="section-icon">📝</span> How to Add Crafting Content <span class="level-badge l4" style="font-size:10px;margin-left:8px;">Commander</span>
+      </div>
+      <div class="section-body">
+        <p>
+          Each tab has a clearly marked section in the HTML source for adding content.
+          Look for the HTML comments marked <code style="color:var(--dm-green-light);font-family:var(--font-mono);">CONTENT GOES HERE</code>
+          within the relevant <code style="color:var(--dm-green-light);font-family:var(--font-mono);">tab-panel</code>.
+        </p>
+        <p>Use the pre-built components from <code style="color:var(--dm-green-light);font-family:var(--font-mono);">css/pages.css</code>:</p>
+      </div>
+
+      <div class="content-grid" style="margin-top:16px;">
+        <div class="card">
+          <div class="card-title">.card</div>
+          <div class="card-body">
+            Use for individual items or recipes. Add classes like
+            <code>.gold</code>, <code>.red</code>, <code>.cyan</code> for colour variants.
+          </div>
+        </div>
+        <div class="card gold">
+          <div class="card-title">.info-table</div>
+          <div class="card-body">
+            Use for ingredient lists and crafting costs. Supports hover highlighting
+            and is fully responsive.
+          </div>
+        </div>
+        <div class="card cyan">
+          <div class="card-title">.tip-box</div>
+          <div class="card-body">
+            Use for tips, warnings, and notes. Add classes
+            <code>.warning</code> or <code>.danger</code> for colour variants.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-container -->
+
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/nav.js"></script>
+
 <script>
-  if (!isConfigured()){location.href='setup.html';}else{initFirebase();DM.nav.init();}
-  function switchTab(name,btn){
-    document.querySelectorAll('.tabpanel').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('tab-'+name).classList.add('active');
-    btn.classList.add('active');
+  const user = DM.nav.init();
+
+  // Show editor guide for Commanders
+  if (user && user.accessLevel >= 4) {
+    document.getElementById('editor-guide').classList.remove('hidden');
   }
+
+  // Tab switching
+  window.switchTab = function(tabName, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    btn.classList.add('active');
+  };
 </script>
 </body>
 </html>

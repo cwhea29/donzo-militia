@@ -12,82 +12,165 @@
 
 <!-- Nav injected by nav.js -->
 
-<div class="ctrl-bar">
-  <div class="cgrp">
-    <span class="clbl">Layer</span>
-    <button class="map-tab active" onclick="DM.map.switchMap('atlas',this)">Atlas</button>
-    <button class="map-tab" onclick="DM.map.switchMap('roadmap',this)">Roadmap</button>
-    <button class="map-tab" onclick="DM.map.switchMap('satellite',this)">Satellite</button>
+<!-- ── MAP CONTROLS ─────────────────────────────────── -->
+<div class="map-controls">
+
+  <!-- MAP LAYERS -->
+  <div class="ctrl-group">
+    <span class="ctrl-label">Layer</span>
+    <button class="map-tab active" data-map="atlas"
+            onclick="DM.map.switchMap('atlas',this)">Atlas</button>
+    <button class="map-tab" data-map="roadmap"
+            onclick="DM.map.switchMap('roadmap',this)">Roadmap</button>
+    <button class="map-tab" data-map="satellite"
+            onclick="DM.map.switchMap('satellite',this)">Satellite</button>
   </div>
-  <div class="cgrp">
-    <span class="clbl">Zone</span>
-    <button class="zone-tab active" data-zone="mainland" onclick="DM.map.switchZone('mainland',this)">Los Santos</button>
-    <button class="zone-tab" data-zone="cayo" onclick="DM.map.switchZone('cayo',this)">☠ Cayo Perico</button>
+
+  <!-- ZONES -->
+  <div class="ctrl-group">
+    <span class="ctrl-label">Zone</span>
+    <button class="zone-tab active" data-zone="mainland"
+            onclick="DM.map.switchZone('mainland',this)">Los Santos</button>
+    <button class="zone-tab" data-zone="cayo"
+            onclick="DM.map.switchZone('cayo',this)">☠ Cayo Perico</button>
   </div>
-  <div class="cright">
-    <button id="place-btn" class="hidden" onclick="DM.map.togglePlaceMode()">📍 Place Marker</button>
-    <button id="user-mgmt-btn" class="cbtn hidden" onclick="DM.map.openUserMgmt()">👥 Users</button>
-    <button class="cbtn" onclick="DM.map.resetView()">⌖ Reset</button>
-    <button class="cbtn" onclick="DM.map.toggleSidebar()">Locations ▾</button>
+
+  <!-- ACTIONS -->
+  <div class="ctrl-right">
+    <!-- Place marker — shown only if user has permission -->
+    <button class="place-btn hidden" id="place-btn"
+            onclick="DM.map.togglePlaceMode()">📍 Place Marker</button>
+
+    <!-- User management — shown only for Commander (level 4) -->
+    <button class="ctrl-btn hidden" id="user-mgmt-btn"
+            onclick="DM.map.openUserMgmt()">👥 Users</button>
+
+    <!-- Reset view -->
+    <button class="ctrl-btn" onclick="DM.map.resetView()">⌖ Reset View</button>
+
+    <!-- Sidebar toggle -->
+    <button class="ctrl-btn" onclick="DM.map.toggleSidebar()">Locations ▾</button>
   </div>
+
 </div>
 
+<!-- ── MAP WRAPPER ───────────────────────────────────── -->
 <div class="map-wrap" id="map-wrap"
      onclick="DM.map.onMapClick(event)"
-     onmousemove="DM.map.onMouseMove(event)">
+     onmousemove="DM.map.onMapMouseMove(event)">
+
   <div id="pan-container">
     <div id="zoom-layer">
       <!--
-        MAP IMAGE SETUP — place these files inside images/maps/ :
-          GTAV_ATLUS.jpg              (Los Santos atlas)
-          GTAV-HD-MAP-roadmap.jpg     (Los Santos roadmap)
-          GTAV-HD-MAP-satellite.jpg   (Los Santos satellite)
-          GTAV-CAYO-atlas.jpg         (Cayo Perico atlas)
-          GTAV-CAYO-roadmap.jpg       (Cayo Perico roadmap)
-          GTAV-CAYO-satellite.jpg     (Cayo Perico satellite)
-        Location popup images go in images/locations/
+        ╔═══════════════════════════════════════════════════╗
+        ║  MAP IMAGE FILES                                   ║
+        ║  Place these inside the  images/maps/  folder:    ║
+        ║                                                    ║
+        ║  Los Santos:                                       ║
+        ║    GTAV_ATLUS.jpg                                  ║
+        ║    GTAV-HD-MAP-roadmap.jpg                         ║
+        ║    GTAV-HD-MAP-satellite.jpg                       ║
+        ║                                                    ║
+        ║  Cayo Perico:                                      ║
+        ║    GTAV-CAYO-atlas.jpg                             ║
+        ║    GTAV-CAYO-roadmap.jpg                           ║
+        ║    GTAV-CAYO-satellite.jpg                         ║
+        ║                                                    ║
+        ║  Location images → images/locations/              ║
+        ╚═══════════════════════════════════════════════════╝
       -->
-      <img id="map-img" alt="Map" draggable="false">
+      <img id="map-img" alt="GTA V Map" draggable="false">
       <div id="markers-layer"></div>
     </div>
   </div>
-  <div id="map-no-img" class="hidden">
-    <div class="no-img-txt">// MAP IMAGE NOT FOUND<br><span style="font-size:9px;opacity:.5;">Add map images to images/maps/ folder</span></div>
+
+  <!-- No image fallback -->
+  <div id="map-no-image" class="hidden">
+    <div class="no-image-text">
+      // MAP IMAGE NOT FOUND<br>
+      <span style="opacity:.5;font-size:9px;">
+        Add images to the images/maps/ folder<br>
+        See comments in map.html for filenames
+      </span>
+    </div>
   </div>
 
-  <!-- Sidebar -->
+  <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
-    <div class="sb-hdr">
-      <div class="sb-ttl">LOCATIONS</div>
-      <button class="sb-close" onclick="DM.map.toggleSidebar()">✕</button>
+    <div class="sidebar-header">
+      <div class="sidebar-title">LOCATIONS</div>
+      <button class="sidebar-close" onclick="DM.map.toggleSidebar()">✕</button>
     </div>
-    <div class="sb-search">
-      <input type="text" placeholder="// Search..." oninput="DM.map.renderSidebar(this.value)" style="margin-bottom:0;">
+
+    <div class="sidebar-search">
+      <input type="text" placeholder="// Search locations..."
+             oninput="DM.map.renderSidebar(this.value)"
+             id="sidebar-search-input">
     </div>
-    <div class="sb-stats">
-      <div class="sb-stat"><span class="sb-n" id="stat-main">0</span>Los Santos</div>
-      <div class="sb-stat"><span class="sb-n sb-nc" id="stat-cayo">0</span>Cayo</div>
+
+    <div class="sidebar-stats">
+      <div class="stat-item">
+        <span class="stat-num" id="stat-mainland">0</span>
+        Los Santos
+      </div>
+      <div class="stat-item">
+        <span class="stat-num cayo-num" id="stat-cayo">0</span>
+        Cayo
+      </div>
     </div>
-    <div class="sb-list" id="sb-list"><div class="sb-empty">// Loading...</div></div>
+
+    <div class="sidebar-list" id="sidebar-list">
+      <div class="sidebar-empty">// LOADING LOCATIONS...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── STATUS BAR ────────────────────────────────────── -->
+<div class="statusbar">
+  <div class="statusbar-item">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="mode-label">VIEW MODE</span>
+  </div>
+  <div class="statusbar-item">
+    ZONE: <span class="status-val" id="zone-label">LOS SANTOS</span>
+  </div>
+  <div class="statusbar-item">
+    MARKERS: <span class="status-val" id="marker-count">—</span>
+  </div>
+  <div class="statusbar-item statusbar-right" id="coords-display">
+    X: — / Y: —
   </div>
 </div>
 
-<div class="statusbar">
-  <div class="si"><div class="sdot" id="sdot"></div><span id="smode">VIEW MODE</span></div>
-  <div class="si">ZONE: <span class="sval" id="zone-label">LOS SANTOS</span></div>
-  <div class="si">MARKERS: <span class="sval" id="marker-count">—</span></div>
-  <div class="si sr" id="coords-disp">X: — / Y: —</div>
-</div>
+<!-- ── ADD MARKER MODAL ──────────────────────────────── -->
+<div class="modal-overlay hidden" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-icon">📍</span>
+      <div class="modal-title">NEW LOCATION</div>
+      <button class="modal-close" onclick="DM.map.closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
 
-<!-- ADD MARKER MODAL -->
-<div class="overlay hidden" id="add-modal">
-  <div class="modal" style="max-width:470px;">
-    <div class="mhdr"><span style="font-size:20px;">📍</span><div class="mttl">NEW LOCATION</div><button class="mclose" onclick="DM.map.closeAddModal()">✕</button></div>
-    <div class="mbody">
-      <div class="fg"><label>// Location Name *</label><input type="text" id="m-name" placeholder="e.g. Maze Bank Arena"></div>
-      <div class="fg"><label>// Description (optional)</label><textarea id="m-desc" placeholder="Notes, tips..." style="margin-bottom:0;min-height:65px;resize:vertical;"></textarea></div>
-      <div class="fg" style="margin-top:14px;"><label>// Image Filename (optional)</label><input type="text" id="m-img" placeholder="e.g. maze_bank.jpg"><div class="hint">// Place image in images/locations/ folder</div></div>
-      <div class="fg"><label>// Category</label>
+      <div class="form-group">
+        <label>// Location Name *</label>
+        <input type="text" id="m-name" placeholder="e.g. Maze Bank Arena">
+      </div>
+
+      <div class="form-group">
+        <label>// Description (optional)</label>
+        <textarea id="m-desc" placeholder="Notes, directions, tips..." style="min-height:70px;resize:vertical;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>// Image Filename (optional)</label>
+        <input type="text" id="m-img" placeholder="e.g. maze_bank.jpg">
+        <div class="form-hint">// Place image in images/locations/ folder</div>
+      </div>
+
+      <div class="form-group">
+        <label>// Category</label>
         <select id="m-cat">
           <option value="poi">📍 Point of Interest</option>
           <option value="base">🏠 Base / Safe House</option>
@@ -98,86 +181,122 @@
           <option value="other">📌 Other</option>
         </select>
       </div>
-      <div class="fg"><label>// Minimum Access Level to View</label>
+
+      <div class="form-group">
+        <label>// Minimum Access Level to View</label>
         <select id="m-vis">
-          <option value="1">🌐 Public — all members (Level 1+)</option>
-          <option value="2">🔒 Restricted — Operative+ (Level 2+)</option>
-          <option value="3">🔐 Confidential — Lieutenant+ (Level 3+)</option>
-          <option value="4">⛔ Top Secret — Commander only (Level 4)</option>
+          <option value="1">🌐 Level 1+ — Public (all members)</option>
+          <option value="2">🔒 Level 2+ — Restricted (Operative+)</option>
+          <option value="3">🔐 Level 3+ — Confidential (Lieutenant+)</option>
+          <option value="4">⛔ Level 4 — Top Secret (Commander only)</option>
         </select>
-        <div class="hint">// Users below this level cannot see this marker</div>
+        <div class="form-hint">// Users below this level cannot see this marker</div>
       </div>
+
     </div>
-    <div class="mfoot">
-      <button class="btn btn-ghost" onclick="DM.map.closeAddModal()">Cancel</button>
-      <button class="btn btn-primary" id="save-marker-btn" onclick="DM.map.saveMarker()">SAVE LOCATION</button>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="DM.map.closeAddModal()">Cancel</button>
+      <button class="btn-primary" id="modal-save-btn" onclick="DM.map.saveMarker()"
+              style="font-size:16px;padding:10px 24px;">SAVE LOCATION</button>
     </div>
   </div>
 </div>
 
-<!-- POPUP -->
+<!-- ── MARKER POPUP ──────────────────────────────────── -->
 <div class="marker-popup hidden" id="marker-popup">
-  <div class="pp-img-wrap">
-    <div id="pp-img"></div>
-    <div class="pp-overlay"></div>
-    <div class="pp-zone" id="pp-zone">📍 Los Santos</div>
-    <button class="pp-close" onclick="DM.map.closePopup()">✕</button>
+  <div class="popup-img-wrap">
+    <div id="popup-img-wrap"></div>
+    <div class="popup-img-overlay"></div>
+    <div class="popup-zone-badge" id="popup-zone-badge">Los Santos</div>
+    <button class="popup-close" onclick="DM.map.closePopup()">✕</button>
   </div>
-  <div class="pp-body">
-    <div class="pp-name" id="pp-name"></div>
-    <div class="pp-desc" id="pp-desc"></div>
-    <div class="pp-tags">
-      <span class="pp-cat-tag" id="pp-cat"></span>
-      <span id="pp-vis"></span>
+  <div class="popup-body">
+    <div class="popup-name" id="popup-name"></div>
+    <div class="popup-desc" id="popup-desc"></div>
+    <div class="popup-tags">
+      <span class="popup-cat-tag" id="popup-cat"></span>
+      <span id="popup-vis"></span>
     </div>
-    <div class="pp-meta" id="pp-meta"></div>
+    <div class="popup-meta" id="popup-meta"></div>
   </div>
-  <div class="pp-footer hidden" id="pp-footer">
-    <button class="btn-danger" onclick="DM.map.deleteMarker()">🗑 Delete Location</button>
+  <div class="popup-footer hidden" id="popup-footer">
+    <button class="btn-danger" style="width:100%;" onclick="DM.map.deleteCurrentMarker()">
+      🗑 Delete Location
+    </button>
   </div>
 </div>
 
-<!-- USER MANAGEMENT MODAL -->
-<div class="overlay hidden" id="user-modal">
-  <div class="modal" style="max-width:580px;">
-    <div class="mhdr"><span style="font-size:20px;">👥</span><div class="mttl">USER MANAGEMENT</div><button class="mclose" onclick="DM.map.closeUserMgmt()">✕</button></div>
-    <div class="mbody">
-      <div id="user-list" style="min-height:60px;"></div>
-      <div class="add-u-ttl">// ADD NEW USER</div>
-      <div class="add-u-grid">
-        <div class="fg"><label>Username</label><input type="text" id="nu-un" placeholder="callsign" autocapitalize="none"></div>
-        <div class="fg"><label>Password</label><input type="password" id="nu-pw" placeholder="password"></div>
-        <div class="fg"><label>Display Name</label><input type="text" id="nu-dn" placeholder="Full name"></div>
-        <div class="fg"><label>Access Level</label>
-          <select id="nu-lv">
-            <option value="1">Level 1 — Recruit</option>
-            <option value="2">Level 2 — Operative</option>
-            <option value="3">Level 3 — Lieutenant</option>
-            <option value="4">Level 4 — Commander</option>
-          </select>
-        </div>
+<!-- ── USER MANAGEMENT MODAL (Commander only) ─────── -->
+<div class="modal-overlay hidden" id="user-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <span class="modal-icon">👥</span>
+      <div class="modal-title">USER MANAGEMENT</div>
+      <button class="modal-close" onclick="DM.map.closeUserMgmt()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div id="user-list">
+        <div class="loading-text">// LOADING USERS...</div>
       </div>
-      <button class="btn btn-primary" style="font-size:15px;padding:10px 20px;margin-top:4px;" onclick="DM.map.addUser()">ADD USER</button>
+
+      <div class="add-user-form">
+        <div class="add-user-form-title">// ADD NEW USER</div>
+        <div class="add-user-grid">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="nu-username" placeholder="callsign" autocapitalize="none">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="nu-password" placeholder="password">
+          </div>
+          <div class="form-group">
+            <label>Display Name</label>
+            <input type="text" id="nu-display" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label>Access Level</label>
+            <select id="nu-level">
+              <option value="1">Level 1 — Recruit</option>
+              <option value="2">Level 2 — Operative</option>
+              <option value="3">Level 3 — Lieutenant</option>
+              <option value="4">Level 4 — Commander</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" style="font-size:15px;padding:9px 22px;"
+                onclick="DM.map.addNewUser()">ADD USER</button>
+      </div>
+
     </div>
-    <div class="mfoot"><button class="btn btn-ghost" onclick="DM.map.closeUserMgmt()">Close</button></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="DM.map.closeUserMgmt()">Close</button>
+    </div>
   </div>
 </div>
 
+<!-- Toast notification -->
 <div class="toast" id="toast"></div>
 
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- App scripts (order matters) -->
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/map.js"></script>
+
 <script>
-  if (!isConfigured()) { window.location.href = 'setup.html'; }
-  else {
-    initFirebase();
-    const user = DM.nav.init();
-    if (user) DM.map.init(user);
+  // Init nav (checks auth + injects nav bar)
+  const currentUser = DM.nav.init();
+
+  // Init map module
+  if (currentUser) {
+    DM.map.init(currentUser);
   }
 </script>
 </body>

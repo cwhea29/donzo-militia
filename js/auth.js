@@ -1,71 +1,115 @@
 /**
  * DONZO MILITIA — AUTH MODULE
+ * Handles login, logout, and session management via sessionStorage.
+ * Each page calls DM.auth.requireAuth() to protect itself.
  */
+
 window.DM = window.DM || {};
 
 DM.auth = (() => {
-  const SESSION_KEY = 'dm_session_v2';
 
+  const SESSION_KEY = 'dm_session';
+
+  // ─── GET CURRENT USER FROM SESSION ──────────────────────
   function getCurrentUser() {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch { return null; }
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
   }
 
+  // ─── SAVE SESSION ────────────────────────────────────────
   function setSession(user) {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
   }
 
+  // ─── CLEAR SESSION ───────────────────────────────────────
   function clearSession() {
     sessionStorage.removeItem(SESSION_KEY);
   }
 
+  // ─── LOGIN ───────────────────────────────────────────────
   async function login(username, password) {
     try {
       const snap = await db.collection('users')
         .where('username', '==', username.trim().toLowerCase())
-        .limit(1).get();
+        .limit(1)
+        .get();
 
-      if (snap.empty) return { success: false, error: 'User not found' };
+      if (snap.empty) {
+        return { success: false, error: 'USER NOT FOUND' };
+      }
 
-      const doc  = snap.docs[0];
-      const data = doc.data();
+      const doc = snap.docs[0];
+      const userData = doc.data();
 
-      if (data.password !== password) return { success: false, error: 'Wrong password' };
+      // Simple password check (store hashed in production)
+      if (userData.password !== password) {
+        return { success: false, error: 'INVALID PASSWORD' };
+      }
 
-      const level    = parseInt(data.accessLevel);
-      const lvlInfo  = ACCESS_LEVELS[level] || ACCESS_LEVELS[1];
+      const level = parseInt(userData.accessLevel);
+      const levelInfo = ACCESS_LEVELS[level];
 
       const user = {
-        id: doc.id, username: data.username,
-        displayName:  data.displayName || data.username,
+        id:           doc.id,
+        username:     userData.username,
+        displayName:  userData.displayName || userData.username,
         accessLevel:  level,
-        levelName:    lvlInfo.name,
-        levelColor:   lvlInfo.color,
-        levelBg:      lvlInfo.bgColor,
-        canAddMarkers: lvlInfo.canAddMarkers,
-        canDeleteOwn:  lvlInfo.canDeleteOwn,
-        canDeleteAll:  lvlInfo.canDeleteAll
+        levelName:    levelInfo ? levelInfo.name : 'Unknown',
+        levelColor:   levelInfo ? levelInfo.color : '#666',
+        canAddMarkers:levelInfo ? levelInfo.canAddMarkers : false,
+        canDeleteOwn: levelInfo ? levelInfo.canDeleteOwn  : false,
+        canDeleteAll: levelInfo ? levelInfo.canDeleteAll  : false
       };
+
       setSession(user);
       return { success: true, user };
+
     } catch (err) {
-      console.error(err);
-      return { success: false, error: 'Connection error — check Firebase setup' };
+      console.error('Login error:', err);
+      return { success: false, error: 'CONNECTION ERROR — CHECK FIREBASE CONFIG' };
     }
   }
 
+  // ─── LOGOUT ──────────────────────────────────────────────
   function logout() {
     clearSession();
     window.location.href = 'index.html';
   }
 
+  // ─── REQUIRE AUTH (call on every protected page) ─────────
+  // Returns the user object or redirects to login
   function requireAuth() {
     const user = getCurrentUser();
-    if (!user) { window.location.href = 'index.html'; return null; }
+    if (!user) {
+      window.location.href = 'index.html';
+      return null;
+    }
     return user;
   }
 
-  function canViewMarker(marker, user)  { return (marker.minAccessLevel || 1) <= user.accessLevel; }
-  function canDeleteMarker(marker, user){ return user.canDeleteAll || (user.canDeleteOwn && marker.createdBy === user.username); }
+  // ─── CHECK IF USER CAN VIEW A MARKER ─────────────────────
+  function canViewMarker(marker, user) {
+    return (marker.minAccessLevel || 1) <= user.accessLevel;
+  }
 
-  return { login, logout, requireAuth, getCurrentUser, clearSession, setSession, canViewMarker, canDeleteMarker };
+  // ─── CHECK IF USER CAN DELETE A MARKER ───────────────────
+  function canDeleteMarker(marker, user) {
+    if (user.canDeleteAll) return true;
+    if (user.canDeleteOwn && marker.createdBy === user.username) return true;
+    return false;
+  }
+
+  return {
+    login,
+    logout,
+    requireAuth,
+    getCurrentUser,
+    canViewMarker,
+    canDeleteMarker
+  };
+
 })();

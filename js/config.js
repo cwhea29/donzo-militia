@@ -1,24 +1,86 @@
 /**
- * DONZO MILITIA — DYNAMIC CONFIG
- * Reads Firebase config from localStorage (set by setup wizard).
- * No manual code editing required.
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║   DONZO MILITIA — FIREBASE CONFIGURATION                  ║
+ * ║                                                           ║
+ * ║   SETUP STEPS:                                            ║
+ * ║   1. Go to https://console.firebase.google.com           ║
+ * ║   2. Create a new project (e.g. "donzo-militia-map")     ║
+ * ║   3. Click "Web" app icon to register a web app          ║
+ * ║   4. Copy your firebaseConfig object below               ║
+ * ║   5. Go to Firestore Database → Create database          ║
+ * ║      → Start in TEST MODE                                ║
+ * ║   6. Then add your first Commander user via the          ║
+ * ║      Firebase Console → Firestore → "users" collection   ║
+ * ║                                                           ║
+ * ║   FIRST USER (add manually in Firestore Console):        ║
+ * ║   Collection: users                                       ║
+ * ║   Document fields:                                        ║
+ * ║     username:    "commander"                              ║
+ * ║     password:    "yourpassword"                           ║
+ * ║     displayName: "Commander"                              ║
+ * ║     accessLevel: 4                                        ║
+ * ╚══════════════════════════════════════════════════════════╝
  */
 
-// ─── CONSTANTS (never need editing) ──────────────────────
+const firebaseConfig = {
+  apiKey:            "PASTE_YOUR_API_KEY_HERE",
+  authDomain:        "PASTE_YOUR_AUTH_DOMAIN_HERE",
+  projectId:         "PASTE_YOUR_PROJECT_ID_HERE",
+  storageBucket:     "PASTE_YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID_HERE",
+  appId:             "PASTE_YOUR_APP_ID_HERE"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ─── ACCESS LEVELS ──────────────────────────────────────────
 const ACCESS_LEVELS = {
-  1: { name: 'Recruit',     color: '#8a9a7a', bgColor: 'rgba(138,154,122,0.15)', canAddMarkers: false, canDeleteOwn: false, canDeleteAll: false },
-  2: { name: 'Operative',   color: '#4e6443', bgColor: 'rgba(78,100,67,0.15)',   canAddMarkers: false, canDeleteOwn: false, canDeleteAll: false },
-  3: { name: 'Lieutenant',  color: '#c9a84c', bgColor: 'rgba(201,168,76,0.15)',  canAddMarkers: true,  canDeleteOwn: true,  canDeleteAll: false },
-  4: { name: 'Commander',   color: '#c0392b', bgColor: 'rgba(192,57,43,0.15)',   canAddMarkers: true,  canDeleteOwn: true,  canDeleteAll: true  }
+  1: {
+    name:          'Recruit',
+    color:         '#8a9a7a',
+    bgColor:       'rgba(138,154,122,0.15)',
+    canAddMarkers: false,
+    canDeleteOwn:  false,
+    canDeleteAll:  false
+  },
+  2: {
+    name:          'Operative',
+    color:         '#4e6443',
+    bgColor:       'rgba(78,100,67,0.15)',
+    canAddMarkers: false,
+    canDeleteOwn:  false,
+    canDeleteAll:  false
+  },
+  3: {
+    name:          'Lieutenant',
+    color:         '#c9a84c',
+    bgColor:       'rgba(201,168,76,0.15)',
+    canAddMarkers: true,
+    canDeleteOwn:  true,
+    canDeleteAll:  false
+  },
+  4: {
+    name:          'Commander',
+    color:         '#c0392b',
+    bgColor:       'rgba(192,57,43,0.15)',
+    canAddMarkers: true,
+    canDeleteOwn:  true,
+    canDeleteAll:  true
+  }
 };
 
+// ─── MARKER VISIBILITY LABELS ───────────────────────────────
 const VISIBILITY_LEVELS = {
-  1: { label: 'Public',       icon: '🌐', color: '#8a9a7a' },
-  2: { label: 'Restricted',   icon: '🔒', color: '#4e6443' },
-  3: { label: 'Confidential', icon: '🔐', color: '#c9a84c' },
-  4: { label: 'Top Secret',   icon: '⛔', color: '#c0392b' }
+  1: { label: 'Public',      icon: '🌐', color: '#8a9a7a' },
+  2: { label: 'Restricted',  icon: '🔒', color: '#4e6443' },
+  3: { label: 'Confidential',icon: '🔐', color: '#c9a84c' },
+  4: { label: 'Top Secret',  icon: '⛔', color: '#c0392b' }
 };
 
+// ─── MAP IMAGES ─────────────────────────────────────────────
+// Place map images inside images/maps/ folder
 const MAP_IMAGES = {
   mainland: {
     atlas:     'images/maps/GTAV_ATLUS.jpg',
@@ -32,6 +94,7 @@ const MAP_IMAGES = {
   }
 };
 
+// ─── CATEGORY ICONS ─────────────────────────────────────────
 const CAT_ICONS = {
   poi:     { icon: '📍', label: 'Point of Interest' },
   base:    { icon: '🏠', label: 'Base / Safe House'  },
@@ -41,41 +104,3 @@ const CAT_ICONS = {
   vehicle: { icon: '🚗', label: 'Vehicle Spawn'      },
   other:   { icon: '📌', label: 'Other'              }
 };
-
-// ─── LOAD FIREBASE CONFIG FROM STORAGE ───────────────────
-window.DM_CONFIG = null;
-
-function loadFirebaseConfig() {
-  try {
-    const raw = localStorage.getItem('dm_firebase_config');
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch { return null; }
-}
-
-function isConfigured() {
-  const cfg = loadFirebaseConfig();
-  return cfg && cfg.apiKey && cfg.projectId;
-}
-
-// ─── INIT FIREBASE (called by each page) ─────────────────
-function initFirebase() {
-  const cfg = loadFirebaseConfig();
-  if (!cfg || !cfg.apiKey) {
-    // Redirect to setup if not configured
-    if (!window.location.pathname.endsWith('setup.html')) {
-      window.location.href = 'setup.html';
-    }
-    return false;
-  }
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(cfg);
-    }
-    window.db = firebase.firestore();
-    return true;
-  } catch (err) {
-    console.error('Firebase init failed:', err);
-    return false;
-  }
-}

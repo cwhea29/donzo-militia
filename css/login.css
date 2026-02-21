@@ -1,0 +1,183 @@
+/* ═══════════════════════════════════════════════════════════
+   DONZO MILITIA — LOGIN CSS
+═══════════════════════════════════════════════════════════ */
+
+body.login-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #0d1a09 0%, #050805 70%);
+  overflow: hidden;
+}
+
+/* ── BACKGROUND EFFECTS ─────────────────────────────────── */
+.login-bg-grid {
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(78,100,67,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(78,100,67,0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: gridPulse 5s ease-in-out infinite;
+}
+
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1;   }
+}
+
+.login-corner {
+  position: fixed;
+  width: 56px; height: 56px;
+  border-color: var(--dm-green);
+  border-style: solid;
+  opacity: 0.5;
+  z-index: 1;
+}
+.login-corner.tl { top: 24px; left: 24px;   border-width: 2px 0 0 2px; }
+.login-corner.tr { top: 24px; right: 24px;   border-width: 2px 2px 0 0; }
+.login-corner.bl { bottom: 24px; left: 24px; border-width: 0 0 2px 2px; }
+.login-corner.br { bottom: 24px; right: 24px;border-width: 0 2px 2px 0; }
+
+.login-scan-line {
+  position: fixed;
+  top: -4px; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(180deg, transparent, rgba(78,100,67,0.3), transparent);
+  animation: scanLine 6s linear infinite;
+  z-index: 2;
+  pointer-events: none;
+}
+
+@keyframes scanLine {
+  0%   { top: -4px; }
+  100% { top: 100vh; }
+}
+
+/* ── LOGIN BOX ──────────────────────────────────────────── */
+.login-box {
+  position: relative; z-index: 10;
+  width: 440px;
+  background: linear-gradient(160deg, #0f1a0a 0%, #0a0f08 100%);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 0 80px rgba(78,100,67,0.18), inset 0 1px 0 rgba(78,100,67,0.25);
+  animation: boxAppear .4s ease;
+}
+
+@keyframes boxAppear {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.login-header {
+  padding: 28px 32px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: linear-gradient(135deg, rgba(78,100,67,0.15) 0%, transparent 60%);
+}
+
+.login-logo-img {
+  width: 72px; height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(78,100,67,0.6));
+  flex-shrink: 0;
+}
+
+.login-brand-text { flex: 1; }
+
+.login-org-name {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 4px;
+  color: var(--dm-green-light);
+  text-shadow: 0 0 24px rgba(78,100,67,0.6);
+  line-height: 1;
+}
+
+.login-org-sub {
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+/* Body */
+.login-body { padding: 26px 32px 32px; }
+
+/* Tabs */
+.login-tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.login-tab {
+  flex: 1; padding: 9px;
+  background: none; border: none;
+  font-family: var(--font-body);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); cursor: pointer;
+  transition: all .2s;
+  border-right: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+
+.login-tab:last-child { border-right: none; }
+
+.login-tab::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--dm-green);
+  transform: scaleX(0); transform-origin: left;
+  transition: transform .3s;
+  opacity: 0.12;
+}
+
+.login-tab.active { color: var(--dm-green-light); }
+.login-tab.active::before { transform: scaleX(1); }
+
+/* Form */
+.login-form .form-group { margin-bottom: 18px; }
+
+/* Button */
+.login-submit-btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Error */
+.login-error {
+  min-height: 18px;
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #e05050;
+  text-align: center;
+}
+
+/* Footer text */
+.login-footer {
+  padding: 14px 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-box { width: calc(100vw - 32px); }
+  .login-header { padding: 20px; }
+  .login-body { padding: 20px; }
+  .login-org-name { font-size: 24px; }
+}

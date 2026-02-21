@@ -5,106 +5,132 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donzo Militia — Login</title>
 <link rel="icon" href="DM_2.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-<style>
-:root{--g:#4e6443;--gl:#6a8a5a;--gd:#2e3d27;--gg:rgba(78,100,67,0.35);--gold:#c9a84c;--red:#c0392b;
-  --dk:#080c07;--p:#0d1209;--p2:#131a0f;--b:#2a3824;--bb:#4e6443;--tx:#c8d4c0;--mt:#5a6e52;
-  --ff:'Bebas Neue',sans-serif;--fb:'Oswald',sans-serif;--fm:'Share Tech Mono',monospace;}
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:var(--fb);background:radial-gradient(ellipse at center,#0d1a09,#050805 70%);color:var(--tx);
-  height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-body::before{content:'';position:fixed;inset:0;z-index:0;
-  background-image:linear-gradient(rgba(78,100,67,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(78,100,67,.07) 1px,transparent 1px);
-  background-size:44px 44px;pointer-events:none;animation:gp 5s ease-in-out infinite;}
-@keyframes gp{0%,100%{opacity:.4;}50%{opacity:1;}}
-.corner{position:fixed;width:52px;height:52px;border-color:var(--g);border-style:solid;opacity:.5;z-index:1;}
-.corner.tl{top:22px;left:22px;border-width:2px 0 0 2px;}
-.corner.tr{top:22px;right:22px;border-width:2px 2px 0 0;}
-.corner.bl{bottom:22px;left:22px;border-width:0 0 2px 2px;}
-.corner.br{bottom:22px;right:22px;border-width:0 2px 2px 0;}
-.box{position:relative;z-index:10;width:420px;background:linear-gradient(160deg,#0f1a0a,#0a0f08);
-  border:1px solid var(--bb);box-shadow:0 0 80px rgba(78,100,67,.18),inset 0 1px 0 rgba(78,100,67,.25);animation:appear .4s ease;}
-@keyframes appear{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.box-header{padding:26px 30px 20px;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:16px;
-  background:linear-gradient(135deg,rgba(78,100,67,.15),transparent 60%);}
-.logo{width:66px;height:66px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(78,100,67,.6));flex-shrink:0;}
-.org{font-family:var(--ff);font-size:28px;letter-spacing:4px;color:var(--gl);text-shadow:0 0 20px var(--gg);line-height:1;}
-.sub{font-size:10px;letter-spacing:4px;color:var(--mt);text-transform:uppercase;font-family:var(--fm);margin-top:4px;}
-.box-body{padding:24px 30px 28px;}
-label{display:block;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--mt);margin-bottom:6px;font-family:var(--fm);}
-input{width:100%;padding:11px 13px;background:rgba(0,0,0,0.4);border:1px solid var(--b);border-left:3px solid var(--g);
-  color:var(--tx);font-family:var(--fm);font-size:14px;outline:none;transition:all .2s;margin-bottom:16px;}
-input:focus{border-color:var(--gl);box-shadow:0 0 0 1px rgba(78,100,67,.2);}
-.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--g),var(--gd));
-  border:1px solid var(--gl);cursor:pointer;font-family:var(--ff);font-size:20px;letter-spacing:4px;color:#fff;transition:all .2s;margin-top:4px;}
-.login-btn:hover{background:linear-gradient(135deg,var(--gl),var(--g));box-shadow:0 4px 20px rgba(78,100,67,.4);}
-.login-btn:disabled{opacity:.6;cursor:not-allowed;}
-.err{min-height:18px;margin-top:12px;font-family:var(--fm);font-size:11px;letter-spacing:2px;color:#e05050;text-align:center;}
-.box-foot{padding:13px 30px;border-top:1px solid var(--b);display:flex;justify-content:space-between;
-  font-family:var(--fm);font-size:9px;letter-spacing:2px;color:var(--mt);}
-.setup-link{color:var(--gold);cursor:pointer;text-decoration:underline;}
-@media(max-width:460px){.box{width:calc(100vw - 24px);} .box-header{padding:18px;} .box-body{padding:18px;}}
-</style>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/login.css">
 </head>
-<body>
-<div class="corner tl"></div><div class="corner tr"></div>
-<div class="corner bl"></div><div class="corner br"></div>
+<body class="login-page">
 
-<div class="box">
-  <div class="box-header">
-    <img class="logo" src="DM_2.png" alt="DM" onerror="this.style.display='none'">
-    <div>
-      <div class="org">DONZO MILITIA</div>
-      <div class="sub">GTA V Operations Database</div>
+<div class="login-bg-grid"></div>
+<div class="login-scan-line"></div>
+<div class="login-corner tl"></div>
+<div class="login-corner tr"></div>
+<div class="login-corner bl"></div>
+<div class="login-corner br"></div>
+
+<div class="login-box">
+
+  <div class="login-header">
+    <img class="login-logo-img" src="DM_2.png" alt="DM Logo"
+         onerror="this.style.display='none'">
+    <div class="login-brand-text">
+      <div class="login-org-name">DONZO MILITIA</div>
+      <div class="login-org-sub">GTA V Operations Database</div>
     </div>
   </div>
-  <div class="box-body">
-    <form onsubmit="event.preventDefault();doLogin()">
-      <label>// Callsign</label>
-      <input type="text" id="lu" placeholder="Enter username..." autocomplete="off" autocapitalize="none">
-      <label>// Password</label>
-      <input type="password" id="lp" placeholder="Enter password...">
-      <button type="submit" class="login-btn" id="lbtn">GAIN ACCESS</button>
+
+  <div class="login-body">
+    <div class="login-tabs" id="login-tabs">
+      <button class="login-tab active" onclick="window.selectTab(this, 'standard')">Standard Login</button>
+      <button class="login-tab"        onclick="window.selectTab(this, 'guest')">Guest View</button>
+    </div>
+
+    <form class="login-form" onsubmit="event.preventDefault(); window.doLogin()">
+      <div class="form-group">
+        <label>// Callsign</label>
+        <input type="text" id="login-user"
+               placeholder="Enter username..."
+               autocomplete="off" autocapitalize="none">
+      </div>
+      <div class="form-group" id="pass-group">
+        <label>// Password</label>
+        <input type="password" id="login-pass" placeholder="Enter password...">
+      </div>
+      <button type="submit" class="btn-primary login-submit-btn" id="login-btn">
+        GAIN ACCESS
+      </button>
     </form>
-    <div class="err" id="lerr"></div>
+
+    <div class="login-error" id="login-error"></div>
   </div>
-  <div class="box-foot">
+
+  <div class="login-footer">
     <span>// SECURE CONNECTION</span>
-    <span class="setup-link" onclick="location.href='setup.html'">First time? Setup →</span>
+    <span>DONZO MILITIA v2.0</span>
   </div>
+
 </div>
 
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<!-- App scripts -->
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+
 <script>
-  // Redirect if not configured
-  if (!isConfigured()) { window.location.href = 'setup.html'; }
-  else {
-    initFirebase();
-    // Redirect if already logged in
-    if (DM.auth.getCurrentUser()) window.location.href = 'map.html';
+  // If already logged in, redirect to map
+  if (DM.auth.getCurrentUser()) {
+    window.location.href = 'map.html';
   }
 
-  async function doLogin() {
-    const u = document.getElementById('lu').value;
-    const p = document.getElementById('lp').value;
-    const e = document.getElementById('lerr');
-    const b = document.getElementById('lbtn');
-    e.textContent = '';
-    if (!u || !p) { e.textContent = '// Enter username and password'; return; }
-    b.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle;"></span>AUTHENTICATING...';
-    b.disabled = true;
-    const result = await DM.auth.login(u, p);
+  window.selectTab = function(btn, mode) {
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const passGroup = document.getElementById('pass-group');
+    const loginBtn  = document.getElementById('login-btn');
+    if (mode === 'guest') {
+      passGroup.style.display = 'none';
+      loginBtn.textContent = 'ENTER AS GUEST';
+    } else {
+      passGroup.style.display = '';
+      loginBtn.textContent = 'GAIN ACCESS';
+    }
+    window._loginMode = mode;
+  };
+
+  window._loginMode = 'standard';
+
+  window.doLogin = async function() {
+    const errEl = document.getElementById('login-error');
+    const btn   = document.getElementById('login-btn');
+    errEl.textContent = '';
+
+    if (window._loginMode === 'guest') {
+      // Guest: level 1 read-only, no DB check
+      const guestUser = {
+        id: 'guest', username: 'guest',
+        displayName: 'Guest',
+        accessLevel: 1, levelName: 'Recruit',
+        levelColor: '#8a9a7a', levelBg: 'rgba(138,154,122,0.15)',
+        canAddMarkers: false, canDeleteOwn: false, canDeleteAll: false
+      };
+      sessionStorage.setItem('dm_session', JSON.stringify(guestUser));
+      window.location.href = 'map.html';
+      return;
+    }
+
+    const username = document.getElementById('login-user').value;
+    const password = document.getElementById('login-pass').value;
+
+    if (!username || !password) {
+      errEl.textContent = '// USERNAME AND PASSWORD REQUIRED';
+      return;
+    }
+
+    btn.textContent = 'AUTHENTICATING...';
+    btn.disabled = true;
+
+    const result = await DM.auth.login(username, password);
+
     if (result.success) {
       window.location.href = 'map.html';
     } else {
-      e.textContent = '// ' + result.error;
-      b.textContent = 'GAIN ACCESS'; b.disabled = false;
+      errEl.textContent = '// ' + result.error;
+      btn.textContent = 'GAIN ACCESS';
+      btn.disabled = false;
     }
-  }
+  };
 </script>
-<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
 </body>
 </html>
