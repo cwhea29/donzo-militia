@@ -102,7 +102,11 @@ DM.map = (() => {
     }, { passive: false });
 
     wrap.addEventListener('mousedown', e => {
-      if (e.button === 0 && placing) return;
+      if (e.button === 0 && placing) {
+        // In placing mode, still reset moved so the upcoming click can place
+        moved = false;
+        return;
+      }
       panning = true; moved = false;
       lpx = e.clientX - px; lpy = e.clientY - py;
       wrap.style.cursor = 'grabbing';
@@ -116,6 +120,7 @@ DM.map = (() => {
     });
     window.addEventListener('mouseup', () => {
       panning = false;
+      moved = false;   // ensure we can place after any drag
       const w = el('map-area');
       if (w) w.style.cursor = placing ? 'crosshair' : 'default';
     });
@@ -193,7 +198,13 @@ DM.map = (() => {
 
   // ── CLICK / MOVE ─────────────────────────────────────────
   function onMapClick(e) {
-    if (!placing || !user.canAdd || moved) return;
+    if (!placing || !user.canAdd || moved) {
+      // Helpful debug if it keeps failing
+      if (placing && moved) {
+        console.log('[Map] Click blocked because moved flag was true');
+      }
+      return;
+    }
     const r = el('zoom-l').getBoundingClientRect();
     pending = { x: ((e.clientX-r.left)/r.width)*100, y: ((e.clientY-r.top)/r.height)*100 };
     openAddModal();
@@ -213,6 +224,11 @@ DM.map = (() => {
       return;
     }
     placing = !placing;
+
+    if (placing) {
+      moved = false;   // ← Critical: allow the next click to place a marker
+    }
+
     const btn = el('place-btn');
     btn.classList.toggle('on', placing);
     btn.textContent = placing ? '✕ Cancel' : '📍 Place Marker';
