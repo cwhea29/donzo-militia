@@ -278,9 +278,9 @@ body.map-page { height: 100vh; display: flex; flex-direction: column; overflow: 
 /* Markers */
 #marker-layer { position: absolute; inset: 0; pointer-events: none; }
 .marker { position: absolute; transform: translate(-50%,-100%); cursor: pointer; pointer-events: all; transition: transform .15s; z-index: 5; }
-.marker:hover { transform: translate(-50%,-100%) scale(1.3); }
-.mpin { width: 30px; height: 40px; } .mpin svg { width: 100%; height: 100%; }
-.mpulse { position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 12px; height: 6px; border-radius: 50%; background: rgba(78,100,67,.4); animation: pulse 2.2s ease-out infinite; }
+.marker:hover { transform: translate(-50%,-100%) scale(1.25); }
+.mpin { width: 20px; height: 26px; } .mpin svg { width: 100%; height: 100%; }
+.mpulse { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 8px; height: 4px; border-radius: 50%; background: rgba(78,100,67,.4); animation: pulse 2.2s ease-out infinite; }
 .marker.cayo .mpulse { background: rgba(42,175,202,.4); }
 @keyframes pulse { 0% { transform: translateX(-50%) scale(1); opacity: .7; } 100% { transform: translateX(-50%) scale(3.5); opacity: 0; } }
 
