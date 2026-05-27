@@ -1,4 +1,9 @@
 /** DONZO MILITIA — AUTH */
+
+// Ensure the global DM namespace exists (login page doesn't load db.js)
+const DM = window.DM || {};
+window.DM = DM;
+
 DM.auth = (() => {
   const KEY = 'dm_sess';
 

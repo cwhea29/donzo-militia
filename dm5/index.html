@@ -43,7 +43,12 @@
 <script src="js/auth.js"></script>
 <script>
   initDB();
-  if (DM.auth.get()) location.href = 'map.html';
+
+  // Safe check — only redirect if DM and auth are available
+  if (window.DM && DM.auth && DM.auth.get()) {
+    location.href = 'map.html';
+  }
+
   async function doLogin() {
     const e=document.getElementById('lerr'),btn=document.getElementById('lbtn');
     e.textContent='';
