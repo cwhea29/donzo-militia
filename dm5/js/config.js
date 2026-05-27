@@ -52,11 +52,13 @@ window.dmStorage = null;
 
 function initDB() {
   try {
+    console.log('%c[Supabase] Initializing with URL:', 'color:#6a8a5a', SUPABASE_URL);
     window.dmDB      = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     window.dmStorage = window.dmDB.storage;
+    console.log('%c[Supabase] Client created successfully', 'color:#6a8a5a');
     return true;
   } catch (e) {
-    console.error('Supabase init error:', e);
+    console.error('%c[Supabase] Init failed:', 'color:#c0392b', e);
     return false;
   }
 }

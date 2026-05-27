@@ -13,14 +13,24 @@ DM.auth = (() => {
       if (!u || !p) return { ok: false, err: 'Missing credentials' };
       if (p.length < 4) return { ok: false, err: 'Invalid password' };
 
-      const { data, error } = await dmDB
+      // Add a timeout so the UI never hangs forever
+      const queryPromise = dmDB
         .from('users')
         .select('*')
         .eq('username', u)
         .limit(1)
         .single();
 
-      if (error || !data) return { ok: false, err: 'User not found' };
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 8000)
+      );
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (error || !data) {
+        console.error('Supabase login error:', error);
+        return { ok: false, err: 'User not found' };
+      }
       if (data.password !== p) return { ok: false, err: 'Wrong password' };
 
       const lvl  = parseInt(data.access_level);
@@ -34,6 +44,10 @@ DM.auth = (() => {
       set(user);
       return { ok: true, user };
     } catch (e) {
+      console.error('Login failed:', e);
+      if (e.message === 'timeout') {
+        return { ok: false, err: 'Connection timed out — check Supabase URL/key' };
+      }
       return { ok: false, err: 'Connection error — check Supabase' };
     }
   }

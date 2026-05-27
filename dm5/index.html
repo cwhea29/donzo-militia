@@ -50,9 +50,21 @@
     const u=document.getElementById('lu').value,p=document.getElementById('lp').value;
     if(!u||!p){e.textContent='// Enter your callsign and password';return;}
     btn.innerHTML='<span class="spin"></span>AUTHENTICATING...';btn.disabled=true;
-    const r=await DM.auth.login(u,p);
-    if(r.ok){location.href='map.html';}
-    else{e.textContent='// '+r.err;btn.textContent='GAIN ACCESS';btn.disabled=false;}
+    try {
+      const r = await DM.auth.login(u, p);
+      if (r.ok) {
+        location.href = 'map.html';
+      } else {
+        e.textContent = '// ' + r.err;
+        btn.textContent = 'GAIN ACCESS';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      console.error('Unexpected login error:', err);
+      e.textContent = '// Unexpected error — check console';
+      btn.textContent = 'GAIN ACCESS';
+      btn.disabled = false;
+    }
   }
 
   // Password visibility toggle
