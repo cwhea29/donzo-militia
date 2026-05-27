@@ -222,8 +222,10 @@
 <script src="js/map.js"></script>
 <script>
   initDB();
-  const user = DM.nav.init();
-  if (user) DM.map.init(user);
+  if (window.DM && DM.nav) {
+    const user = DM.nav.init();
+    if (user && DM.map) DM.map.init(user);
+  }
 </script>
 </body>
 </html>

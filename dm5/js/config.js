@@ -47,6 +47,10 @@ const CATS = {
   other:   { icon:'📌', label:'Other'              }
 };
 
+// Initialize the global DM namespace (only once, across all scripts)
+const DM = window.DM || {};
+window.DM = DM;
+
 window.dmDB      = null;
 window.dmStorage = null;
 

@@ -13,12 +13,14 @@ DM.map = (() => {
     user = u;
     setupEvents();
     loadMap();
-    DM.db.listenMarkers(user, m => {
-      markers = m;
-      renderMarkers();
-      renderSidebar();
-      el('marker-count').textContent = m.length;
-    });
+    if (DM.db && DM.db.listenMarkers) {
+      DM.db.listenMarkers(user, m => {
+        markers = m;
+        renderMarkers();
+        renderSidebar();
+        el('marker-count').textContent = m.length;
+      });
+    }
     if (user.canAdd) {
       const btn = el('place-btn');
       if (btn) btn.classList.remove('hidden');

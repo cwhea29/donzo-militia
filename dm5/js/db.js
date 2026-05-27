@@ -1,6 +1,4 @@
 /** DONZO MILITIA — DATABASE (Supabase) */
-const DM = window.DM || {};
-window.DM = DM;
 
 DM.db = (() => {
 
