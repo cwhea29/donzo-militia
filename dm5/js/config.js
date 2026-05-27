@@ -2,10 +2,12 @@
  * DONZO MILITIA — CONFIG
  * Supabase backend (auth + realtime markers + storage)
  * Map images (optional): place in dm5/images/maps/ — site degrades gracefully
+ *
+ * Current project: kypeaqpeeywtrqyserrc (new project)
  */
 
-const SUPABASE_URL   = 'https://zcjnyunijtjtpexqyzgo.supabase.co';
-const SUPABASE_KEY   = 'sb_publishable_5IQYlkftvBJtVrzpm44uTQ_yJUOhEgA';
+const SUPABASE_URL   = 'https://kypeaqpeeywtrqyserrc.supabase.co';
+const SUPABASE_KEY   = 'sb_publishable_VeM0fsus2vSjZ1vIZyBGtg_ypXSWEMm';
 const STORAGE_BUCKET = 'marker-images';
 
 const ACCESS = {
