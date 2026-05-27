@@ -19,8 +19,14 @@ DM.map = (() => {
       renderSidebar();
       el('marker-count').textContent = m.length;
     });
-    if (user.canAdd)    el('place-btn').classList.remove('hidden');
-    if (user.level >= 4){ const b = el('users-btn'); if (b) b.classList.remove('hidden'); }
+    if (user.canAdd) {
+      const btn = el('place-btn');
+      if (btn) btn.classList.remove('hidden');
+    }
+    if (user.level >= 4){ 
+      const b = el('users-btn'); 
+      if (b) b.classList.remove('hidden'); 
+    }
   }
 
   // ── MAP IMG ─────────────────────────────────────────────
@@ -200,7 +206,10 @@ DM.map = (() => {
 
   // ── PLACE MODE ───────────────────────────────────────────
   function togglePlace() {
-    if (!user.canAdd) return;
+    if (!user.canAdd) {
+      toast('You do not have permission to place markers (requires Lieutenant or higher)');
+      return;
+    }
     placing = !placing;
     const btn = el('place-btn');
     btn.classList.toggle('on', placing);
@@ -300,7 +309,10 @@ DM.map = (() => {
       closeAddModal();
       if (placing) togglePlace();
       toast('✓ LOCATION SAVED — ' + name.toUpperCase());
-    } catch (e) { toast('Error: ' + e.message); }
+    } catch (e) { 
+      console.error('Failed to save marker:', e);
+      toast('Error saving location: ' + e.message + ' (Check if RLS is disabled on markers table)'); 
+    }
     finally { btn.textContent = 'SAVE LOCATION'; btn.disabled = false; }
   }
 

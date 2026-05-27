@@ -60,7 +60,10 @@ DM.db = (() => {
       created_by:       user.username,
       created_by_level: user.level
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error('Supabase markers insert failed:', error);
+      throw new Error(error.message || 'Insert failed — check RLS on markers table');
+    }
   }
 
   async function deleteMarker(user, marker) {
