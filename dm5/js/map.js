@@ -303,6 +303,10 @@ DM.map = (() => {
     repositioningMarkerId = markerId;
     repositioningCreatedBy = createdBy;
 
+    // Force clean 1:1 view. This guarantees placement math matches the stored x/y values exactly.
+    // Zoomed placement has been unreliable — this makes "Move Location" accurate and trustworthy.
+    resetView();
+
     // Force clean state so the next click is treated as a move target
     placing = false;
     moved = false;
@@ -313,7 +317,7 @@ DM.map = (() => {
     el('sdot').className = 'sdot placing';
     el('smode').textContent = 'MOVING MARKER';
 
-    toast('Click on the map to set the new position (stay zoomed for precision — ESC to cancel)');
+    toast('View reset to 1:1 for accurate placement. Click where you want the marker (ESC to cancel)');
   }
 
   function cancelRepositioning() {
@@ -371,34 +375,12 @@ DM.map = (() => {
     };
   }
 
-  // Live on-screen rect of the image (includes current zoom/pan transform).
-  // Used ONLY for converting mouse clicks → image % so that placement is accurate
-  // even when the user is zoomed in close for precision.
-  function getLiveImageRect() {
-    const img = el('map-img');
-    const container = el('map-area');
-
-    if (!img || !container) return getStableImageRect();
-
-    const live = img.getBoundingClientRect();
-    if (live && live.width > 10 && live.height > 10) {
-      const containerRect = container.getBoundingClientRect();
-      return {
-        left: live.left - containerRect.left,
-        top: live.top - containerRect.top,
-        width: live.width,
-        height: live.height
-      };
-    }
-
-    return getStableImageRect();
-  }
-
-  // Convert a mouse click (while possibly zoomed) into image-relative 0-100 percentages.
-  // Uses the live rect so you can zoom in and click exactly where you want.
+  // Convert a mouse click into image-relative 0-100 percentages.
+  // We force resetView() when entering Place or Move mode, so this always runs at 1:1.
+  // Using the stable rect guarantees the resulting x/y exactly matches how markers are rendered.
   function containerToImagePercent(clientX, clientY) {
     const container = el('map-area');
-    const rect = getLiveImageRect();           // live for accurate input
+    const rect = getStableImageRect();   // stable + forced 1:1 = reliable round-trip
 
     const containerRect = container.getBoundingClientRect();
 
@@ -498,6 +480,9 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
+      // Force clean 1:1 view so the click math exactly matches the stored image-relative x/y.
+      // This is currently the only reliable way to get precise placement.
+      resetView();
       moved = false;
       pointerDownX = 0;
       pointerDownY = 0;
@@ -509,7 +494,7 @@ DM.map = (() => {
     el('map-area').style.cursor = placing ? 'crosshair' : 'default';
     el('sdot').className    = 'sdot' + (placing ? ' placing' : '');
     el('smode').textContent = placing ? 'PLACING MARKER' : 'VIEW MODE';
-    toast(placing ? 'CLICK ON THE MAP (zoom in first for precision)' : 'PLACING MODE OFF');
+    toast(placing ? 'VIEW RESET — Click exactly where you want the marker' : 'PLACING MODE OFF');
   }
 
   // ── ADD / EDIT MODAL ─────────────────────────────────────
@@ -1807,7 +1792,7 @@ DM.map = (() => {
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
     openAuditLogFromNav, openBugsFromNav, deleteBugReport,
     // Exposed for debugging if needed
-    getDisplayedImageRect: getStableImageRect, getLiveImageRect, getStableImageRect, containerToImagePercent, imageToContainerPercent,
+    getDisplayedImageRect: getStableImageRect, containerToImagePercent, imageToContainerPercent,
     startRepositioning, cancelRepositioning, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();
