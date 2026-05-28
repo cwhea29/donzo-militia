@@ -1,5 +1,5 @@
 /**
- * DONZO MILITIA — CONFIG
+ * DONZO — CONFIG
  * Supabase backend (auth + realtime markers + storage)
  * Map images (optional): place in dm5/images/maps/ — site degrades gracefully
  *

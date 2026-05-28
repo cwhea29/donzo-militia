@@ -1,4 +1,4 @@
-# Donzo Militia — Custom Map Images
+# Donzo — Custom Map Images
 
 The map images currently in use live in this folder.
 

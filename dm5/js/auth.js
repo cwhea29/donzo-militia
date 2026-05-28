@@ -1,4 +1,4 @@
-/** DONZO MILITIA — AUTH */
+/** DONZO — AUTH */
 
 DM.auth = (() => {
   const KEY = 'dm_sess';

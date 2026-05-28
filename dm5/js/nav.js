@@ -1,4 +1,4 @@
-/** DONZO MILITIA — NAV */
+/** DONZO — NAV */
 DM.nav = (() => {
   const PAGES = [
     { href:'map.html',          label:'MAP',       icon:'🗺️' },
@@ -20,7 +20,7 @@ DM.nav = (() => {
         <div class="nav-brand">
           <img class="nav-logo" src="images/DM_2.png" alt="Donzo Militia" onerror="this.style.display='none'">
           <div>
-            <div class="nav-org">DONZO MILITIA</div>
+            <div class="nav-org">DONZO</div>
             <div class="nav-sub">LOS SANTOS OPS</div>
           </div>
         </div>

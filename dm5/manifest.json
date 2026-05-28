@@ -1,7 +1,7 @@
 {
-  "name": "Donzo Militia — Operations Database",
+  "name": "Donzo — Operations Database",
   "short_name": "Donzo DM",
-  "description": "GTA V roleplay operations map, crafting reference, and secure location database for the Donzo Militia.",
+  "description": "GTA V roleplay operations map, crafting reference, and secure location database for Donzo.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#080c07",

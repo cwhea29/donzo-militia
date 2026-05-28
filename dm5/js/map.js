@@ -1,4 +1,4 @@
-/** DONZO MILITIA — MAP MODULE */
+/** DONZO — MAP MODULE */
 DM.map = (() => {
   let user, markers = [], activeId = null;
   let curMap = 'atlas', curZone = 'mainland', placing = false, pending = null;

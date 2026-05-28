@@ -1,4 +1,4 @@
-/** DONZO MILITIA — DATABASE (Supabase) */
+/** DONZO — DATABASE (Supabase) */
 
 DM.db = (() => {
 
