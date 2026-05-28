@@ -27,7 +27,20 @@ DM.map = (() => {
     setupEvents();
     loadMap();
     if (DM.db && DM.db.listenMarkers) {
+      let previousMarkerIds = new Set();
+
       DM.db.listenMarkers(user, async (m) => {
+        // Simple notification for new high-value markers
+        if (previousMarkerIds.size > 0) {
+          const newMarkers = m.filter(marker => !previousMarkerIds.has(marker.id));
+          newMarkers.forEach(newMarker => {
+            if (newMarker.min_access_level >= 7) { // Captain+ level markers
+              toast(`🆕 New high-value location added: ${newMarker.name}`);
+            }
+          });
+        }
+        previousMarkerIds = new Set(m.map(marker => marker.id));
+
         markers = m;
         await refreshMarkerGroups();
         renderMarkers();
@@ -1086,6 +1099,57 @@ DM.map = (() => {
     }
   }
 
+  // ── AUDIT LOG ────────────────────────────────────────────
+  async function openAuditLog() {
+    if (!user || user.level < 10) {
+      toast('Only Underboss and Boss can view the Audit Log');
+      return;
+    }
+
+    const modal = el('audit-log-modal');
+    const content = el('audit-log-content');
+    modal.classList.remove('hidden');
+    content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
+
+    try {
+      const logs = await DM.db.getAuditLog(100); // last 100 entries
+
+      if (logs.length === 0) {
+        content.innerHTML = '<div style="padding:20px; color:var(--muted);">No audit entries yet.</div>';
+        return;
+      }
+
+      let html = '<table style="width:100%; border-collapse: collapse;">';
+      html += '<tr style="background: var(--panel2);"><th style="text-align:left; padding:6px;">Time</th><th style="text-align:left; padding:6px;">Action</th><th style="text-align:left; padding:6px;">By</th><th style="text-align:left; padding:6px;">Details</th></tr>';
+
+      logs.forEach(log => {
+        const time = new Date(log.created_at).toLocaleString();
+        let details = '';
+        if (log.details) {
+          if (log.details.name) details += `Name: ${log.details.name} `;
+          if (log.details.comment) details += `Comment: "${log.details.comment}" `;
+        }
+
+        html += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:6px; font-size:11px; white-space:nowrap;">${time}</td>
+          <td style="padding:6px;"><strong>${log.action.toUpperCase()}</strong></td>
+          <td style="padding:6px;">${log.performed_by}</td>
+          <td style="padding:6px; font-size:11px; color:var(--muted);">${details || '-'}</td>
+        </tr>`;
+      });
+
+      html += '</table>';
+      content.innerHTML = html;
+
+    } catch (e) {
+      content.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load audit log: ${e.message}</div>`;
+    }
+  }
+
+  function closeAuditLog() {
+    el('audit-log-modal').classList.add('hidden');
+  }
+
   async function deleteMarker() {
     if (!activeId) return;
     const m = markers.find(x => x.id === activeId);
@@ -1161,6 +1225,12 @@ DM.map = (() => {
   async function openUsers() {
     el('user-modal').classList.remove('hidden');
     await refreshUsers();
+
+    // Show/hide Audit Log button based on rank
+    const auditBtn = el('audit-log-btn');
+    if (auditBtn) {
+      auditBtn.style.display = (user && user.level >= 10) ? 'block' : 'none';
+    }
   }
   function closeUsers() { el('user-modal').classList.add('hidden'); }
 
@@ -1252,6 +1322,7 @@ DM.map = (() => {
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
-    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan, syncMarkerGroups, loadGroupSelectionForModal
+    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
+    openAuditLog, closeAuditLog, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();

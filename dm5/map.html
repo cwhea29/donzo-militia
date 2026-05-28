@@ -266,6 +266,11 @@
         </div>
       </div>
       <button class="btn btn-primary btn-sm" style="margin-top:4px" onclick="DM.map.addUser()">ADD USER</button>
+
+      <!-- Audit Log button (only shown for high ranks via JS) -->
+      <button id="audit-log-btn" class="btn btn-ghost btn-sm" style="margin-top:12px; display:none;" onclick="DM.map.openAuditLog()">
+        📜 View Audit Log (Boss/Underboss only)
+      </button>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="DM.map.closeUsers()">Close</button></div>
   </div>
@@ -288,6 +293,25 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="DM.map.closeHeistPlans()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT LOG MODAL -->
+<div class="overlay hidden" id="audit-log-modal">
+  <div class="modal modal-lg">
+    <div class="modal-hdr">
+      <span style="font-size:20px">📜</span>
+      <div class="modal-title">AUDIT LOG</div>
+      <button class="modal-x" onclick="DM.map.closeAuditLog()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="audit-log-content" style="max-height: 500px; overflow-y: auto; font-size: 13px;">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="DM.map.closeAuditLog()">Close</button>
     </div>
   </div>
 </div>
