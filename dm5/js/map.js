@@ -1367,7 +1367,7 @@ DM.map = (() => {
     }
   }
 
-  // ── BUG REPORTS (Boss only) ──────────────────────────────
+  // ── BUG REPORTS (Visible to everyone) ────────────────────
   async function loadBugReports() {
     const container = el('bug-reports-list');
     if (!container) return;
