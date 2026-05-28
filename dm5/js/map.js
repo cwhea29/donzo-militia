@@ -1099,55 +1099,11 @@ DM.map = (() => {
     }
   }
 
-  // ── AUDIT LOG ────────────────────────────────────────────
-  async function openAuditLog() {
-    if (!user || user.level < 10) {
-      toast('Only Underboss and Boss can view the Audit Log');
-      return;
-    }
-
-    const modal = el('audit-log-modal');
-    const content = el('audit-log-content');
-    modal.classList.remove('hidden');
-    content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
-
-    try {
-      const logs = await DM.db.getAuditLog(100); // last 100 entries
-
-      if (logs.length === 0) {
-        content.innerHTML = '<div style="padding:20px; color:var(--muted);">No audit entries yet.</div>';
-        return;
-      }
-
-      let html = '<table style="width:100%; border-collapse: collapse;">';
-      html += '<tr style="background: var(--panel2);"><th style="text-align:left; padding:6px;">Time</th><th style="text-align:left; padding:6px;">Action</th><th style="text-align:left; padding:6px;">By</th><th style="text-align:left; padding:6px;">Details</th></tr>';
-
-      logs.forEach(log => {
-        const time = new Date(log.created_at).toLocaleString();
-        let details = '';
-        if (log.details) {
-          if (log.details.name) details += `Name: ${log.details.name} `;
-          if (log.details.comment) details += `Comment: "${log.details.comment}" `;
-        }
-
-        html += `<tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:6px; font-size:11px; white-space:nowrap;">${time}</td>
-          <td style="padding:6px;"><strong>${log.action.toUpperCase()}</strong></td>
-          <td style="padding:6px;">${log.performed_by}</td>
-          <td style="padding:6px; font-size:11px; color:var(--muted);">${details || '-'}</td>
-        </tr>`;
-      });
-
-      html += '</table>';
-      content.innerHTML = html;
-
-    } catch (e) {
-      content.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load audit log: ${e.message}</div>`;
-    }
-  }
-
+  // Old separate Audit Log functions removed — now handled as a tab inside User Management
   function closeAuditLog() {
-    el('audit-log-modal').classList.add('hidden');
+    // Kept for backwards compatibility if any old calls exist
+    const modal = el('audit-log-modal');
+    if (modal) modal.classList.add('hidden');
   }
 
   async function deleteMarker() {
@@ -1226,10 +1182,78 @@ DM.map = (() => {
     el('user-modal').classList.remove('hidden');
     await refreshUsers();
 
-    // Show/hide Audit Log button based on rank
-    const auditBtn = el('audit-log-btn');
-    if (auditBtn) {
-      auditBtn.style.display = (user && user.level >= 10) ? 'block' : 'none';
+    // Show Audit Log tab only for Chief+ (level 8+)
+    const auditTab = el('tab-audit');
+    if (auditTab) {
+      auditTab.style.display = (user && user.level >= 8) ? 'block' : 'none';
+    }
+
+    // Default to Users tab
+    switchUserModalTab('users');
+  }
+
+  function switchUserModalTab(tab) {
+    const usersContent = el('user-tab-content');
+    const auditContent = el('audit-tab-content');
+    const usersTab = el('tab-users');
+    const auditTab = el('tab-audit');
+
+    if (tab === 'users') {
+      usersContent.style.display = 'block';
+      auditContent.style.display = 'none';
+      usersTab.style.borderBottom = '2px solid var(--tan)';
+      if (auditTab) auditTab.style.borderBottom = '2px solid transparent';
+    } else if (tab === 'audit') {
+      if (!user || user.level < 8) {
+        toast('Only Chief and higher can view the Audit Log');
+        return;
+      }
+      usersContent.style.display = 'none';
+      auditContent.style.display = 'block';
+      usersTab.style.borderBottom = '2px solid transparent';
+      if (auditTab) auditTab.style.borderBottom = '2px solid var(--tan)';
+
+      // Load audit log into the tab
+      loadAuditLogIntoTab();
+    }
+  }
+
+  async function loadAuditLogIntoTab() {
+    const content = el('audit-tab-content');
+    content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
+
+    try {
+      const logs = await DM.db.getAuditLog(100);
+
+      if (logs.length === 0) {
+        content.innerHTML = '<div style="padding:20px; color:var(--muted);">No audit entries yet.</div>';
+        return;
+      }
+
+      let html = '<table style="width:100%; border-collapse: collapse; font-size:12px;">';
+      html += '<tr style="background: var(--panel2);"><th style="text-align:left; padding:6px;">Time</th><th style="text-align:left; padding:6px;">Action</th><th style="text-align:left; padding:6px;">By</th><th style="text-align:left; padding:6px;">Details</th></tr>';
+
+      logs.forEach(log => {
+        const time = new Date(log.created_at).toLocaleString();
+        let details = '';
+        if (log.details) {
+          if (log.details.name) details += `Name: ${log.details.name} `;
+          if (log.details.comment) details += `Comment: "${log.details.comment}" `;
+        }
+
+        html += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:6px; font-size:11px; white-space:nowrap;">${time}</td>
+          <td style="padding:6px;"><strong>${log.action.toUpperCase()}</strong></td>
+          <td style="padding:6px;">${log.performed_by}</td>
+          <td style="padding:6px; font-size:11px; color:var(--muted);">${details || '-'}</td>
+        </tr>`;
+      });
+
+      html += '</table>';
+      content.innerHTML = html;
+
+    } catch (e) {
+      content.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load audit log: ${e.message}</div>`;
     }
   }
   function closeUsers() { el('user-modal').classList.add('hidden'); }
@@ -1323,6 +1347,6 @@ DM.map = (() => {
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
-    openAuditLog, closeAuditLog, syncMarkerGroups, loadGroupSelectionForModal
+    switchUserModalTab, loadAuditLogIntoTab, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();

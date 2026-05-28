@@ -243,34 +243,51 @@
       <button class="modal-x" onclick="DM.map.closeUsers()">✕</button>
     </div>
     <div class="modal-body">
-      <div id="user-list" style="min-height:50px;"></div>
-      <div class="add-user-ttl">// ADD NEW USER <span style="color:#8a5a4a;font-size:10px">(plain text storage — use strong unique pw)</span></div>
-      <div class="form2">
-        <div class="fg"><label>Username</label><input type="text" id="nu-un" placeholder="callsign" autocapitalize="none"></div>
-        <div class="fg"><label>Password</label><input type="password" id="nu-pw" placeholder="password"></div>
-        <div class="fg"><label>Display Name</label><input type="text" id="nu-dn" placeholder="Full name"></div>
-        <div class="fg"><label>Access Level</label>
-          <select id="nu-lv">
-            <option value="1">Level 1 — Hangy</option>
-            <option value="2">Level 2 — Cadet</option>
-            <option value="3">Level 3 — Private</option>
-            <option value="4">Level 4 — Gunner</option>
-            <option value="5">Level 5 — Corporal</option>
-            <option value="6">Level 6 — Commander</option>
-            <option value="7">Level 7 — Captain</option>
-            <option value="8">Level 8 — Chief</option>
-            <option value="9">Level 9 — Warboss</option>
-            <option value="10">Level 10 — Underboss</option>
-            <option value="11">Level 11 — Boss</option>
-          </select>
+      <!-- Tabs -->
+      <div id="user-modal-tabs" style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--border);">
+        <button id="tab-users" onclick="DM.map.switchUserModalTab('users')" 
+                style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid var(--tan); font-weight: 600; cursor: pointer;">
+          Users
+        </button>
+        <button id="tab-audit" onclick="DM.map.switchUserModalTab('audit')" 
+                style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; display: none;">
+          📜 Audit Log
+        </button>
+      </div>
+
+      <!-- Users Tab Content -->
+      <div id="user-tab-content">
+        <div id="user-list" style="min-height:50px;"></div>
+        <div class="add-user-ttl">// ADD NEW USER <span style="color:#8a5a4a;font-size:10px">(plain text storage — use strong unique pw)</span></div>
+        <div class="form2">
+          <div class="fg"><label>Username</label><input type="text" id="nu-un" placeholder="callsign" autocapitalize="none"></div>
+          <div class="fg"><label>Password</label><input type="password" id="nu-pw" placeholder="password"></div>
+          <div class="fg"><label>Display Name</label><input type="text" id="nu-dn" placeholder="Full name"></div>
+          <div class="fg"><label>Access Level</label>
+            <select id="nu-lv">
+              <option value="1">Level 1 — Hangy</option>
+              <option value="2">Level 2 — Cadet</option>
+              <option value="3">Level 3 — Private</option>
+              <option value="4">Level 4 — Gunner</option>
+              <option value="5">Level 5 — Corporal</option>
+              <option value="6">Level 6 — Commander</option>
+              <option value="7">Level 7 — Captain</option>
+              <option value="8">Level 8 — Chief</option>
+              <option value="9">Level 9 — Warboss</option>
+              <option value="10">Level 10 — Underboss</option>
+              <option value="11">Level 11 — Boss</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:4px" onclick="DM.map.addUser()">ADD USER</button>
+      </div>
+
+      <!-- Audit Log Tab Content -->
+      <div id="audit-tab-content" style="display: none;">
+        <div id="audit-log-content" style="max-height: 480px; overflow-y: auto; font-size: 13px;">
+          <!-- Populated by JS -->
         </div>
       </div>
-      <button class="btn btn-primary btn-sm" style="margin-top:4px" onclick="DM.map.addUser()">ADD USER</button>
-
-      <!-- Audit Log button (only shown for high ranks via JS) -->
-      <button id="audit-log-btn" class="btn btn-ghost btn-sm" style="margin-top:12px; display:none;" onclick="DM.map.openAuditLog()">
-        📜 View Audit Log (Boss/Underboss only)
-      </button>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="DM.map.closeUsers()">Close</button></div>
   </div>
@@ -297,24 +314,7 @@
   </div>
 </div>
 
-<!-- AUDIT LOG MODAL -->
-<div class="overlay hidden" id="audit-log-modal">
-  <div class="modal modal-lg">
-    <div class="modal-hdr">
-      <span style="font-size:20px">📜</span>
-      <div class="modal-title">AUDIT LOG</div>
-      <button class="modal-x" onclick="DM.map.closeAuditLog()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="audit-log-content" style="max-height: 500px; overflow-y: auto; font-size: 13px;">
-        <!-- Populated by JS -->
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="DM.map.closeAuditLog()">Close</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="toast" id="toast"></div>
 
