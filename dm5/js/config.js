@@ -25,10 +25,17 @@ const ACCESS = {
 };
 
 const VIS = {
-  1: { label:'Public',       icon:'🌐', color:'#8a9a7a' },
-  2: { label:'Restricted',   icon:'🔒', color:'#4e6443' },
-  3: { label:'Confidential', icon:'🔐', color:'#c9a84c' },
-  4: { label:'Top Secret',   icon:'⛔', color:'#c0392b' }
+  1:  { label:'Hangy+',      icon:'🌐', color:'#6b5b4f' },
+  2:  { label:'Cadet+',      icon:'🔒', color:'#8a7a6a' },
+  3:  { label:'Private+',    icon:'🔐', color:'#7a9a6a' },
+  4:  { label:'Gunner+',     icon:'🔒', color:'#5a8a5a' },
+  5:  { label:'Corporal+',   icon:'🔐', color:'#4e7a4e' },
+  6:  { label:'Commander+',  icon:'🔒', color:'#c9a84c' },
+  7:  { label:'Captain+',    icon:'🔐', color:'#b87a3a' },
+  8:  { label:'Chief+',      icon:'⛔', color:'#a05a2a' },
+  9:  { label:'Warboss+',    icon:'⛔', color:'#8a3a3a' },
+  10: { label:'Underboss+',  icon:'⛔', color:'#6a2a5a' },
+  11: { label:'Boss Only',   icon:'👑', color:'#c0392b' }
 };
 
 const MAPS = {
