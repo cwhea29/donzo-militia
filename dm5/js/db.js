@@ -217,6 +217,77 @@ DM.db = (() => {
     return data.map(r => r.marker_groups);
   }
 
+  // ── HEIST PLANS (Operation Sequences) ────────────────────
+  async function getHeistPlans() {
+    const { data, error } = await dmDB
+      .from('heist_plans')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function createHeistPlan(user, name, description = '') {
+    const { data, error } = await dmDB.from('heist_plans').insert({
+      name: name.trim(),
+      description: description.trim(),
+      created_by: user.username
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function getHeistPlanSteps(planId) {
+    const { data, error } = await dmDB
+      .from('heist_plan_steps')
+      .select(`
+        id,
+        step_order,
+        notes,
+        markers (id, name, category, zone, min_access_level)
+      `)
+      .eq('plan_id', planId)
+      .order('step_order', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function addStepToPlan(planId, markerId, stepOrder, notes = '') {
+    const { error } = await dmDB.from('heist_plan_steps').insert({
+      plan_id: planId,
+      marker_id: markerId,
+      step_order: stepOrder,
+      notes: notes.trim()
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async function updateStepOrder(planId, steps) {
+    // steps = [{ id, step_order }, ...]
+    const updates = steps.map(step => 
+      dmDB.from('heist_plan_steps')
+        .update({ step_order: step.step_order })
+        .eq('id', step.id)
+    );
+    await Promise.all(updates);
+  }
+
+  async function removeStepFromPlan(stepId) {
+    const { error } = await dmDB
+      .from('heist_plan_steps')
+      .delete()
+      .eq('id', stepId);
+    if (error) throw new Error(error.message);
+  }
+
+  async function deleteHeistPlan(planId) {
+    const { error } = await dmDB
+      .from('heist_plans')
+      .delete()
+      .eq('id', planId);
+    if (error) throw new Error(error.message);
+  }
+
   // ── AUDIT LOG ────────────────────────────────────────────
   async function logAudit(markerId, action, performedBy, details = {}) {
     await dmDB.from('marker_audit_log').insert({
@@ -312,6 +383,14 @@ DM.db = (() => {
     addMarkerToGroup,
     removeMarkerFromGroup,
     getMarkerGroups,
-    getAuditLog
+    getAuditLog,
+    // Heist Plans
+    getHeistPlans,
+    createHeistPlan,
+    getHeistPlanSteps,
+    addStepToPlan,
+    updateStepOrder,
+    removeStepFromPlan,
+    deleteHeistPlan
   };
 })();

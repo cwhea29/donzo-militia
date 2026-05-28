@@ -73,6 +73,9 @@
       <div class="sb-ttl">LOCATIONS</div>
       <button class="sb-x" onclick="DM.map.toggleSidebar()">✕</button>
     </div>
+    <button onclick="DM.map.openHeistPlans()" style="margin: 8px 12px; width: calc(100% - 24px); font-size: 12px;">
+      📋 Heist Plans
+    </button>
     <div class="sb-search">
       <input type="text" placeholder="// Search locations..." oninput="DM.map.renderSidebar(this.value)">
     </div>
@@ -256,6 +259,27 @@
       <button class="btn btn-primary btn-sm" style="margin-top:4px" onclick="DM.map.addUser()">ADD USER</button>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="DM.map.closeUsers()">Close</button></div>
+  </div>
+</div>
+
+<!-- HEIST PLANS MODAL -->
+<div class="overlay hidden" id="heist-plans-modal">
+  <div class="modal modal-lg">
+    <div class="modal-hdr">
+      <span style="font-size:20px">📋</span>
+      <div class="modal-title">HEIST PLANS</div>
+      <button class="modal-x" onclick="DM.map.closeHeistPlans()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-size:12px; color:var(--muted);">Create sequences for your operations</div>
+        <button onclick="DM.map.createNewHeistPlan()" class="btn btn-primary btn-sm">+ New Plan</button>
+      </div>
+      <div id="heist-plans-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="DM.map.closeHeistPlans()">Close</button>
+    </div>
   </div>
 </div>
 

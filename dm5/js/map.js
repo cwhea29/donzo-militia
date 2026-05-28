@@ -797,6 +797,95 @@ DM.map = (() => {
       .catch(e => toast('Failed to create group: ' + e.message));
   }
 
+  // ── HEIST PLANS UI ───────────────────────────────────────
+  async function openHeistPlans() {
+    const modal = el('heist-plans-modal');
+    modal.classList.remove('hidden');
+    await loadHeistPlans();
+  }
+
+  function closeHeistPlans() {
+    el('heist-plans-modal').classList.add('hidden');
+  }
+
+  async function loadHeistPlans() {
+    const container = el('heist-plans-list');
+    container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Loading plans...</div>';
+
+    try {
+      const plans = await DM.db.getHeistPlans();
+
+      if (plans.length === 0) {
+        container.innerHTML = `
+          <div style="padding:20px; text-align:center; color:var(--muted);">
+            No Heist Plans yet.<br>
+            <button onclick="DM.map.createNewHeistPlan()" style="margin-top:12px;">Create your first plan</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = plans.map(plan => `
+        <div style="border:1px solid var(--border); padding:12px; margin-bottom:8px; border-radius:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${plan.name}</strong>
+            <div>
+              <button onclick="DM.map.viewHeistPlan('${plan.id}')" style="font-size:10px;">View</button>
+              <button onclick="DM.map.deleteHeistPlan('${plan.id}')" style="font-size:10px; color:#c0392b;">Delete</button>
+            </div>
+          </div>
+          ${plan.description ? `<div style="font-size:11px; color:var(--muted); margin-top:4px;">${plan.description}</div>` : ''}
+          <div style="font-size:10px; color:var(--muted); margin-top:6px;">Created by ${plan.created_by}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      container.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load plans: ${e.message}</div>`;
+    }
+  }
+
+  async function createNewHeistPlan() {
+    const name = prompt('Heist Plan name:');
+    if (!name || !name.trim()) return;
+
+    const description = prompt('Description (optional):') || '';
+
+    try {
+      await DM.db.createHeistPlan(user, name.trim(), description);
+      toast('Heist Plan created!');
+      await loadHeistPlans();
+    } catch (e) {
+      toast('Error creating plan: ' + e.message);
+    }
+  }
+
+  async function viewHeistPlan(planId) {
+    // For now, just show steps in console + alert. Full UI coming next.
+    try {
+      const steps = await DM.db.getHeistPlanSteps(planId);
+      if (steps.length === 0) {
+        alert("This plan has no steps yet. We'll add the ability to add markers soon.");
+        return;
+      }
+
+      const stepsText = steps.map((s, i) => `${i+1}. ${s.markers?.name || 'Unknown'} ${s.notes ? `(${s.notes})` : ''}`).join('\n');
+      alert(`Plan Steps:\n\n${stepsText}`);
+    } catch (e) {
+      alert('Error loading plan: ' + e.message);
+    }
+  }
+
+  async function deleteHeistPlan(planId) {
+    if (!confirm('Delete this entire Heist Plan?')) return;
+
+    try {
+      await DM.db.deleteHeistPlan(planId);
+      toast('Plan deleted');
+      await loadHeistPlans();
+    } catch (e) {
+      toast('Error: ' + e.message);
+    }
+  }
+
   async function deleteMarker() {
     if (!activeId) return;
     const m = markers.find(x => x.id === activeId);
@@ -962,6 +1051,7 @@ DM.map = (() => {
     closeAddModal, onImagePicked, removeImage, saveMarker,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
-    useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups
+    useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
+    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan
   };
 })();
