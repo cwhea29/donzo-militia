@@ -523,6 +523,8 @@ DM.map = (() => {
     el('popup').classList.add('hidden'); 
     activeId = null; 
     el('pp-comments-list').innerHTML = '';
+    const input = el('pp-comment-input');
+    if (input) input.value = '';
   }
 
   async function loadCommentsForPopup(markerId) {
@@ -535,12 +537,25 @@ DM.map = (() => {
         list.innerHTML = '<div style="color:var(--muted); font-size:11px; font-style:italic;">No comments yet.</div>';
         return;
       }
-      list.innerHTML = comments.map(c => `
-        <div style="margin-bottom:6px; border-left:2px solid var(--border); padding-left:6px;">
-          <strong>${c.username}</strong> <span style="color:var(--muted); font-size:10px;">${new Date(c.created_at).toLocaleDateString()}</span><br>
-          ${c.comment}
-        </div>
-      `).join('');
+      list.innerHTML = comments.map(c => {
+        const isOwner = user && c.username === user.username;
+        const actions = isOwner ? `
+          <span style="margin-left:8px; font-size:10px;">
+            <a href="#" onclick="DM.map.editComment('${c.id}', '${c.comment.replace(/'/g, "\\'")}'); return false;">Edit</a> · 
+            <a href="#" onclick="DM.map.deleteComment('${c.id}'); return false;" style="color:#c0392b;">Delete</a>
+          </span>
+        ` : '';
+
+        return `
+          <div style="margin-bottom:6px; border-left:2px solid var(--border); padding-left:6px;">
+            <strong>${c.username}</strong> 
+            <span style="color:var(--muted); font-size:10px;">${new Date(c.created_at).toLocaleDateString()}</span>
+            ${actions}
+            <br>
+            <span id="comment-text-${c.id}">${c.comment}</span>
+          </div>
+        `;
+      }).join('');
     } catch (e) {
       list.innerHTML = '<div style="color:#e05050; font-size:11px;">Failed to load comments.</div>';
     }
@@ -558,6 +573,60 @@ DM.map = (() => {
       toast('Comment added');
     } catch (e) {
       toast('Error adding comment: ' + e.message);
+    }
+  }
+
+  // Edit comment inline
+  function editComment(commentId, currentText) {
+    const span = el(`comment-text-${commentId}`);
+    if (!span) return;
+
+    const originalHTML = span.innerHTML;
+
+    span.innerHTML = `
+      <input type="text" id="edit-comment-${commentId}" value="${currentText}" style="width: 85%; font-size:11px;">
+      <button onclick="DM.map.saveEditedComment('${commentId}')" style="font-size:10px; margin-left:4px;">Save</button>
+      <button onclick="DM.map.cancelEditComment('${commentId}', '${originalHTML.replace(/'/g, "\\'")}')" style="font-size:10px;">Cancel</button>
+    `;
+
+    const input = el(`edit-comment-${commentId}`);
+    input.focus();
+    input.select();
+  }
+
+  async function saveEditedComment(commentId) {
+    const input = el(`edit-comment-${commentId}`);
+    if (!input) return;
+
+    const newText = input.value.trim();
+    if (!newText) {
+      toast('Comment cannot be empty');
+      return;
+    }
+
+    try {
+      await DM.db.updateComment(commentId, newText, user.username);
+      loadCommentsForPopup(activeId);
+      toast('Comment updated');
+    } catch (e) {
+      toast('Failed to update comment: ' + e.message);
+    }
+  }
+
+  function cancelEditComment(commentId, originalHTML) {
+    const span = el(`comment-text-${commentId}`);
+    if (span) span.innerHTML = originalHTML;
+  }
+
+  async function deleteComment(commentId) {
+    if (!confirm('Delete this comment?')) return;
+
+    try {
+      await DM.db.deleteComment(commentId, user.username);
+      loadCommentsForPopup(activeId);
+      toast('Comment deleted');
+    } catch (e) {
+      toast('Failed to delete comment: ' + e.message);
     }
   }
 
@@ -586,12 +655,10 @@ DM.map = (() => {
 
       btn.onclick = () => {
         if (activeCategories.size === 0) {
-          // If none selected, selecting one starts filtering
           activeCategories = new Set([cat]);
         } else if (activeCategories.has(cat)) {
           activeCategories.delete(cat);
           if (activeCategories.size === 0) {
-            // If last one deselected, show all
             activeCategories = new Set();
           }
         } else {
@@ -599,6 +666,7 @@ DM.map = (() => {
         }
         renderCategoryFilters();
         renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+        renderMarkers();   // ← Also filter the actual map pins
       };
 
       container.appendChild(btn);
@@ -613,6 +681,7 @@ DM.map = (() => {
         activeCategories = new Set();
         renderCategoryFilters();
         renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+        renderMarkers();
       };
       container.appendChild(clearBtn);
     }
@@ -653,6 +722,7 @@ DM.map = (() => {
         return matchesSearch && matchesCategory;
       });
       if (!f.length) return '';
+      renderMarkers(); // keep map in sync with sidebar filters/search
       return `<div class="sb-sec">${title} <span>(${f.length})</span></div>` +
         f.map(m => {
           const v = VIS[m.min_access_level] || VIS[1];
@@ -782,6 +852,6 @@ DM.map = (() => {
     closeAddModal, onImagePicked, removeImage, saveMarker,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
-    useFallbackMap, addCommentToMarker
+    useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters
   };
 })();

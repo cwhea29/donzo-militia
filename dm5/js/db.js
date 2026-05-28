@@ -150,8 +150,27 @@ DM.db = (() => {
     });
     if (error) throw new Error(error.message);
 
-    // Log to audit
     await logAudit(markerId, 'comment', user.username, { comment: commentText });
+  }
+
+  async function updateComment(commentId, newText, username) {
+    const { error } = await dmDB
+      .from('marker_comments')
+      .update({ comment: newText })
+      .eq('id', commentId)
+      .eq('username', username); // only allow owner to edit
+
+    if (error) throw new Error(error.message);
+  }
+
+  async function deleteComment(commentId, username) {
+    const { error } = await dmDB
+      .from('marker_comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('username', username); // only allow owner to delete
+
+    if (error) throw new Error(error.message);
   }
 
   // ── GROUPS ───────────────────────────────────────────────
@@ -286,6 +305,8 @@ DM.db = (() => {
     // New features
     getComments,
     addComment,
+    updateComment,
+    deleteComment,
     getGroups,
     createGroup,
     addMarkerToGroup,
