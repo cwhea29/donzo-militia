@@ -1106,6 +1106,24 @@ DM.map = (() => {
     if (modal) modal.classList.add('hidden');
   }
 
+  // Functions called from the top navigation for high-rank users
+  function openAuditLogFromNav() {
+    // Open User Management and switch to Audit Log tab
+    openUsers();
+    // Small delay to ensure the modal and tabs are ready
+    setTimeout(() => {
+      switchUserModalTab('audit');
+    }, 150);
+  }
+
+  function openBugsFromNav() {
+    // Open User Management and switch to Bugs tab
+    openUsers();
+    setTimeout(() => {
+      switchUserModalTab('bugs');
+    }, 150);
+  }
+
   async function deleteMarker() {
     if (!activeId) return;
     const m = markers.find(x => x.id === activeId);
@@ -1409,6 +1427,7 @@ DM.map = (() => {
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
-    switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility, syncMarkerGroups, loadGroupSelectionForModal
+    switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
+    openAuditLogFromNav, openBugsFromNav, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();

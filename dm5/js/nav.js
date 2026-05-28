@@ -26,6 +26,8 @@ DM.nav = (() => {
         </div>
         <div class="nav-links">
           ${PAGES.map(p=>`<a href="${p.href}" class="nav-link${cur===p.href?' active':''}">${p.icon} ${p.label}</a>`).join('')}
+          ${user.level >= 8 ? `<a href="#" onclick="DM.map.openAuditLogFromNav(); return false;" class="nav-link">📜 AUDIT LOG</a>` : ''}
+          ${user.level === 11 ? `<a href="#" onclick="DM.map.openBugsFromNav(); return false;" class="nav-link">🐛 BUGS</a>` : ''}
         </div>
         <div class="nav-right">
           <span class="nav-badge" style="color:${lvl.color};border-color:${lvl.color};background:${lvl.bg}">
@@ -41,6 +43,8 @@ DM.nav = (() => {
       </nav>
       <div class="nav-drawer" id="nav-drawer">
         ${PAGES.map(p=>`<a href="${p.href}" onclick="document.getElementById('nav-drawer').classList.remove('open')">${p.icon} ${p.label}</a>`).join('')}
+        ${user.level >= 8 ? `<a href="#" onclick="DM.map.openAuditLogFromNav(); document.getElementById('nav-drawer').classList.remove('open'); return false;">📜 AUDIT LOG</a>` : ''}
+        ${user.level === 11 ? `<a href="#" onclick="DM.map.openBugsFromNav(); document.getElementById('nav-drawer').classList.remove('open'); return false;">🐛 BUGS</a>` : ''}
         <div class="nav-drawer-foot">
           <span class="nav-badge" style="color:${lvl.color};border-color:${lvl.color};background:${lvl.bg}">LVL ${user.level} — ${lvl.name}</span>
           <button class="nav-logout" onclick="DM.auth.logout()">LOGOUT</button>
