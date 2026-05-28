@@ -76,6 +76,12 @@
     <div class="sb-search">
       <input type="text" placeholder="// Search locations..." oninput="DM.map.renderSidebar(this.value)">
     </div>
+
+    <!-- Category Filters -->
+    <div class="sb-filters" style="padding: 8px 12px; border-bottom: 1px solid var(--border);">
+      <div style="font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px;">FILTER BY CATEGORY</div>
+      <div id="category-filters" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+    </div>
     <div class="sb-stats">
       <div class="sb-stat"><span class="sb-n" id="stat-main">0</span> Los Santos</div>
       <div class="sb-stat"><span class="sb-n sb-nc" id="stat-cayo">0</span> Cayo</div>
@@ -188,6 +194,19 @@
       <span id="pp-vis"></span>
     </div>
     <div class="popup-meta" id="pp-meta"></div>
+    
+    <!-- Last Updated -->
+    <div class="popup-updated" id="pp-updated" style="font-size:10px; color:var(--muted); margin-top:6px;"></div>
+
+    <!-- Comments Section -->
+    <div class="popup-comments" style="margin-top:12px; border-top:1px solid var(--border); padding-top:8px;">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">COMMENTS</div>
+      <div id="pp-comments-list" style="max-height:120px; overflow-y:auto; font-size:12px; margin-bottom:6px;"></div>
+      <div style="display:flex; gap:4px;">
+        <input type="text" id="pp-comment-input" placeholder="Add a note..." style="flex:1; font-size:11px; padding:4px 6px;">
+        <button onclick="DM.map.addCommentToMarker()" style="font-size:10px; padding:2px 8px;">Post</button>
+      </div>
+    </div>
   </div>
   <div class="popup-foot hidden" id="pp-foot">
     <!-- Buttons are injected dynamically via JS based on permissions -->

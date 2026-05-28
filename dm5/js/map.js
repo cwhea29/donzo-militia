@@ -7,6 +7,10 @@ DM.map = (() => {
   let toastT, pendingImageUrl = null;
   let editingMarkerId = null;   // NEW: for editing markers from popup
 
+  // Category filters state
+  let activeCategories = new Set(); // empty = show all
+  let allCategories = Object.keys(CATS);
+
   function el(id) { return document.getElementById(id); }
 
   // ── INIT ────────────────────────────────────────────────
@@ -30,6 +34,10 @@ DM.map = (() => {
       const b = el('users-btn'); 
       if (b) b.classList.remove('hidden'); 
     }
+
+    // Initialize category filters
+    activeCategories = new Set();
+    renderCategoryFilters();
   }
 
   // ── MAP IMG ─────────────────────────────────────────────
@@ -422,7 +430,10 @@ DM.map = (() => {
       11: '#4a0050'
     };
 
-    markers.filter(m => m.zone === curZone).forEach(m => {
+    markers
+      .filter(m => m.zone === curZone)
+      .filter(m => activeCategories.size === 0 || activeCategories.has(m.category))
+      .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
       div.style.cssText = `left:${m.x}%;top:${m.y}%;`;
@@ -464,6 +475,15 @@ DM.map = (() => {
     el('pp-cat').textContent  = cat.label;
     el('pp-meta').textContent = `Added by ${m.created_by||'—'} (${lvl.name||'Unknown'})`;
 
+    // Last Updated timestamp
+    const updatedEl = el('pp-updated');
+    if (m.updated_at) {
+      const date = new Date(m.updated_at);
+      updatedEl.textContent = `Last updated: ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+    } else {
+      updatedEl.textContent = '';
+    }
+
     // Image — now a URL from Supabase Storage
     const iw = el('pp-img');
     iw.innerHTML = m.image_url
@@ -484,6 +504,13 @@ DM.map = (() => {
     }
 
     popup.classList.remove('hidden');
+
+    // Load comments (only if user is logged in)
+    if (user) {
+      loadCommentsForPopup(m.id);
+    } else {
+      el('pp-comments-list').innerHTML = '<div style="color:var(--muted); font-size:11px;">Log in to view comments.</div>';
+    }
     const pw=300, ph=420;
     let lx = e.clientX+14, ly = e.clientY-20;
     if (lx+pw > innerWidth -10) lx = e.clientX-pw-14;
@@ -492,7 +519,104 @@ DM.map = (() => {
     popup.style.left = lx+'px'; popup.style.top = ly+'px';
   }
 
-  function closePopup() { el('popup').classList.add('hidden'); activeId = null; }
+  function closePopup() { 
+    el('popup').classList.add('hidden'); 
+    activeId = null; 
+    el('pp-comments-list').innerHTML = '';
+  }
+
+  async function loadCommentsForPopup(markerId) {
+    const list = el('pp-comments-list');
+    list.innerHTML = '<div style="color:var(--muted); font-size:11px;">Loading comments...</div>';
+
+    try {
+      const comments = await DM.db.getComments(markerId);
+      if (comments.length === 0) {
+        list.innerHTML = '<div style="color:var(--muted); font-size:11px; font-style:italic;">No comments yet.</div>';
+        return;
+      }
+      list.innerHTML = comments.map(c => `
+        <div style="margin-bottom:6px; border-left:2px solid var(--border); padding-left:6px;">
+          <strong>${c.username}</strong> <span style="color:var(--muted); font-size:10px;">${new Date(c.created_at).toLocaleDateString()}</span><br>
+          ${c.comment}
+        </div>
+      `).join('');
+    } catch (e) {
+      list.innerHTML = '<div style="color:#e05050; font-size:11px;">Failed to load comments.</div>';
+    }
+  }
+
+  async function addCommentToMarker() {
+    const input = el('pp-comment-input');
+    const text = input.value.trim();
+    if (!text || !activeId) return;
+
+    try {
+      await DM.db.addComment(user, activeId, text);
+      input.value = '';
+      loadCommentsForPopup(activeId);
+      toast('Comment added');
+    } catch (e) {
+      toast('Error adding comment: ' + e.message);
+    }
+  }
+
+  // ── CATEGORY FILTERS ─────────────────────────────────────
+  function renderCategoryFilters() {
+    const container = el('category-filters');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    allCategories.forEach(cat => {
+      const catInfo = CATS[cat] || CATS.other;
+      const isActive = activeCategories.size === 0 || activeCategories.has(cat);
+
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        font-size: 10px; 
+        padding: 2px 6px; 
+        border: 1px solid ${isActive ? 'var(--tan-lt)' : 'var(--border)'}; 
+        background: ${isActive ? 'rgba(152,133,88,0.15)' : 'transparent'};
+        color: var(--text); 
+        cursor: pointer;
+        border-radius: 3px;
+      `;
+      btn.textContent = `${catInfo.icon} ${catInfo.label.split(' ')[0]}`;
+
+      btn.onclick = () => {
+        if (activeCategories.size === 0) {
+          // If none selected, selecting one starts filtering
+          activeCategories = new Set([cat]);
+        } else if (activeCategories.has(cat)) {
+          activeCategories.delete(cat);
+          if (activeCategories.size === 0) {
+            // If last one deselected, show all
+            activeCategories = new Set();
+          }
+        } else {
+          activeCategories.add(cat);
+        }
+        renderCategoryFilters();
+        renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+      };
+
+      container.appendChild(btn);
+    });
+
+    // Add "Clear" button if filtering
+    if (activeCategories.size > 0) {
+      const clearBtn = document.createElement('button');
+      clearBtn.style.cssText = 'font-size: 9px; padding: 1px 5px; margin-left: 4px;';
+      clearBtn.textContent = 'Clear';
+      clearBtn.onclick = () => {
+        activeCategories = new Set();
+        renderCategoryFilters();
+        renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+      };
+      container.appendChild(clearBtn);
+    }
+  }
 
   async function deleteMarker() {
     if (!activeId) return;
@@ -523,7 +647,11 @@ DM.map = (() => {
     if (!markers.length) { list.innerHTML = '<div class="sb-empty">// NO LOCATIONS YET</div>'; return; }
 
     const sec = (title, arr) => {
-      const f = arr.filter(m => m.name.toLowerCase().includes(q) || (m.description||'').toLowerCase().includes(q));
+      const f = arr.filter(m => {
+        const matchesSearch = m.name.toLowerCase().includes(q) || (m.description||'').toLowerCase().includes(q);
+        const matchesCategory = activeCategories.size === 0 || activeCategories.has(m.category);
+        return matchesSearch && matchesCategory;
+      });
       if (!f.length) return '';
       return `<div class="sb-sec">${title} <span>(${f.length})</span></div>` +
         f.map(m => {
@@ -654,6 +782,6 @@ DM.map = (() => {
     closeAddModal, onImagePicked, removeImage, saveMarker,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
-    useFallbackMap
+    useFallbackMap, addCommentToMarker
   };
 })();

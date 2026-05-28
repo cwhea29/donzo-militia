@@ -131,5 +131,166 @@ DM.db = (() => {
     if (error) throw new Error(error.message);
   }
 
-  return { uploadImage, listenMarkers, addMarker, deleteMarker, updateMarker, getUsers, addUser, updateLevel, deleteUser };
+  // ── COMMENTS ────────────────────────────────────────────
+  async function getComments(markerId) {
+    const { data, error } = await dmDB
+      .from('marker_comments')
+      .select('*')
+      .eq('marker_id', markerId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function addComment(user, markerId, commentText) {
+    const { error } = await dmDB.from('marker_comments').insert({
+      marker_id: markerId,
+      username: user.username,
+      comment: commentText
+    });
+    if (error) throw new Error(error.message);
+
+    // Log to audit
+    await logAudit(markerId, 'comment', user.username, { comment: commentText });
+  }
+
+  // ── GROUPS ───────────────────────────────────────────────
+  async function getGroups() {
+    const { data, error } = await dmDB
+      .from('marker_groups')
+      .select('*')
+      .order('name');
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function createGroup(user, name) {
+    const { data, error } = await dmDB.from('marker_groups').insert({
+      name: name.trim(),
+      created_by: user.username
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async function addMarkerToGroup(markerId, groupId) {
+    const { error } = await dmDB.from('marker_group_members').insert({
+      marker_id: markerId,
+      group_id: groupId
+    });
+    if (error && error.code !== '23505') throw new Error(error.message); // ignore duplicate
+  }
+
+  async function removeMarkerFromGroup(markerId, groupId) {
+    const { error } = await dmDB.from('marker_group_members')
+      .delete()
+      .eq('marker_id', markerId)
+      .eq('group_id', groupId);
+    if (error) throw new Error(error.message);
+  }
+
+  async function getMarkerGroups(markerId) {
+    const { data, error } = await dmDB
+      .from('marker_group_members')
+      .select('group_id, marker_groups(name)')
+      .eq('marker_id', markerId);
+    if (error) throw new Error(error.message);
+    return data.map(r => r.marker_groups);
+  }
+
+  // ── AUDIT LOG ────────────────────────────────────────────
+  async function logAudit(markerId, action, performedBy, details = {}) {
+    await dmDB.from('marker_audit_log').insert({
+      marker_id: markerId,
+      action,
+      performed_by: performedBy,
+      details
+    });
+  }
+
+  async function getAuditLog(limit = 50) {
+    const { data, error } = await dmDB
+      .from('marker_audit_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  // ── ENHANCED UPDATE (with audit) ─────────────────────────
+  async function updateMarker(user, markerId, m) {
+    console.log('[updateMarker] Called for', markerId);
+
+    const tempMarker = { id: markerId, created_by: m.created_by };
+    if (!DM.auth.canDelete(tempMarker, user)) {
+      console.warn('[updateMarker] Permission denied');
+      throw new Error('No permission to edit this location');
+    }
+
+    const { error } = await dmDB.from('markers').update({
+      name:             m.name,
+      description:      m.description    || '',
+      image_url:        m.imageUrl       || '',
+      category:         m.category       || 'poi',
+      min_access_level: parseInt(m.minLevel) || 1,
+    }).eq('id', markerId);
+
+    if (error) {
+      console.error('Supabase markers update failed:', error);
+      throw new Error(error.message || 'Update failed');
+    }
+
+    // Log audit
+    await logAudit(markerId, 'update', user.username, {
+      name: m.name,
+      category: m.category
+    });
+  }
+
+  // ── ENHANCED ADD (with audit) ────────────────────────────
+  async function addMarker(user, m) {
+    if (!user.canAdd) throw new Error('Insufficient access level');
+
+    const { data, error } = await dmDB.from('markers').insert({
+      name:             m.name,
+      description:      m.description    || '',
+      image_url:        m.imageUrl       || '',
+      category:         m.category       || 'poi',
+      zone:             m.zone,
+      x:                m.x,
+      y:                m.y,
+      min_access_level: parseInt(m.minLevel) || 1,
+      created_by:       user.username,
+      created_by_level: user.level
+    }).select().single();
+
+    if (error) throw new Error(error.message);
+
+    // Log audit
+    await logAudit(data.id, 'create', user.username, { name: m.name });
+
+    return data;
+  }
+
+  return { 
+    uploadImage, 
+    listenMarkers, 
+    addMarker, 
+    deleteMarker, 
+    updateMarker, 
+    getUsers, 
+    addUser, 
+    updateLevel, 
+    deleteUser,
+    // New features
+    getComments,
+    addComment,
+    getGroups,
+    createGroup,
+    addMarkerToGroup,
+    removeMarkerFromGroup,
+    getMarkerGroups,
+    getAuditLog
+  };
 })();
