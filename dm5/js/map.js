@@ -859,18 +859,67 @@ DM.map = (() => {
   }
 
   async function viewHeistPlan(planId) {
-    // For now, just show steps in console + alert. Full UI coming next.
+    const modal = el('heist-plans-modal');
+    const container = el('heist-plans-list');
+
     try {
-      const steps = await DM.db.getHeistPlanSteps(planId);
-      if (steps.length === 0) {
-        alert("This plan has no steps yet. We'll add the ability to add markers soon.");
+      const [plan, steps] = await Promise.all([
+        DM.db.getHeistPlans().then(plans => plans.find(p => p.id === planId)),
+        DM.db.getHeistPlanSteps(planId)
+      ]);
+
+      if (!plan) {
+        container.innerHTML = '<div style="color:#e05050;">Plan not found.</div>';
         return;
       }
 
-      const stepsText = steps.map((s, i) => `${i+1}. ${s.markers?.name || 'Unknown'} ${s.notes ? `(${s.notes})` : ''}`).join('\n');
-      alert(`Plan Steps:\n\n${stepsText}`);
+      let html = `
+        <div style="margin-bottom:12px;">
+          <button onclick="DM.map.loadHeistPlans()" style="font-size:11px;">← Back to Plans</button>
+          <h3 style="margin:8px 0 4px;">${plan.name}</h3>
+          ${plan.description ? `<div style="color:var(--muted); margin-bottom:12px;">${plan.description}</div>` : ''}
+        </div>
+      `;
+
+      if (steps.length === 0) {
+        html += `
+          <div style="padding:20px; text-align:center; color:var(--muted); border:1px dashed var(--border);">
+            No steps added yet.<br>
+            <button onclick="DM.map.addMarkerToHeistPlan('${planId}')" style="margin-top:10px;">+ Add First Step</button>
+          </div>
+        `;
+      } else {
+        html += `<div style="margin-bottom:12px;"><strong>Steps (${steps.length})</strong></div>`;
+
+        steps.forEach((step, index) => {
+          const marker = step.markers;
+          const cat = marker ? (CATS[marker.category] || CATS.other) : null;
+
+          html += `
+            <div style="display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--border); margin-bottom:6px; border-radius:4px;">
+              <div style="font-weight:bold; min-width:22px;">${index + 1}.</div>
+              <div style="flex:1;">
+                ${cat ? cat.icon + ' ' : ''}<strong>${marker ? marker.name : 'Unknown Marker'}</strong>
+                ${step.notes ? `<div style="font-size:11px; color:var(--muted);">${step.notes}</div>` : ''}
+              </div>
+              <div>
+                <button onclick="DM.map.removeStepFromPlan('${step.id}', '${planId}')" style="font-size:10px; color:#c0392b;">Remove</button>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+          <div style="margin-top:12px;">
+            <button onclick="DM.map.addMarkerToHeistPlan('${planId}')" style="width:100%;">+ Add Another Step</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+
     } catch (e) {
-      alert('Error loading plan: ' + e.message);
+      container.innerHTML = `<div style="color:#e05050;">Failed to load plan: ${e.message}</div>`;
     }
   }
 
@@ -881,6 +930,62 @@ DM.map = (() => {
       await DM.db.deleteHeistPlan(planId);
       toast('Plan deleted');
       await loadHeistPlans();
+    } catch (e) {
+      toast('Error: ' + e.message);
+    }
+  }
+
+  async function addMarkerToHeistPlan(planId) {
+    const currentMarkers = markers.filter(m => m.zone === curZone);
+
+    if (currentMarkers.length === 0) {
+      toast('No markers in current zone');
+      return;
+    }
+
+    // Simple picker using the current markers
+    const container = el('heist-plans-list');
+    container.innerHTML = `
+      <div style="margin-bottom:12px;">
+        <button onclick="DM.map.viewHeistPlan('${planId}')">← Back</button>
+        <strong style="margin-left:12px;">Select a marker to add as next step</strong>
+      </div>
+    `;
+
+    const listDiv = document.createElement('div');
+
+    currentMarkers.forEach(marker => {
+      const cat = CATS[marker.category] || CATS.other;
+      const btn = document.createElement('button');
+      btn.style.cssText = 'display:block; width:100%; text-align:left; margin-bottom:4px; padding:6px;';
+      btn.innerHTML = `${cat.icon} ${marker.name} <span style="color:var(--muted); font-size:10px;">(Lvl ${marker.min_access_level})</span>`;
+
+      btn.onclick = async () => {
+        const nextOrder = (await DM.db.getHeistPlanSteps(planId)).length + 1;
+
+        try {
+          await DM.db.addStepToPlan(planId, marker.id, nextOrder);
+          toast(`Added "${marker.name}" to plan`);
+          await viewHeistPlan(planId);
+        } catch (e) {
+          toast('Failed to add step: ' + e.message);
+          await viewHeistPlan(planId);
+        }
+      };
+
+      listDiv.appendChild(btn);
+    });
+
+    container.appendChild(listDiv);
+  }
+
+  async function removeStepFromPlan(stepId, planId) {
+    if (!confirm('Remove this step from the plan?')) return;
+
+    try {
+      await DM.db.removeStepFromPlan(stepId);
+      toast('Step removed');
+      await viewHeistPlan(planId);
     } catch (e) {
       toast('Error: ' + e.message);
     }
@@ -1052,6 +1157,6 @@ DM.map = (() => {
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
-    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan
+    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan
   };
 })();
