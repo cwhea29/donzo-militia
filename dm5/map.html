@@ -82,6 +82,15 @@
       <div style="font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px;">FILTER BY CATEGORY</div>
       <div id="category-filters" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
     </div>
+
+    <!-- Group Filters -->
+    <div class="sb-filters" style="padding: 8px 12px; border-bottom: 1px solid var(--border);">
+      <div style="font-size: 10px; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center;">
+        <span>FILTER BY GROUP</span>
+        <button onclick="DM.map.showCreateGroupModal()" style="font-size:9px; padding:1px 5px;">+ New</button>
+      </div>
+      <div id="group-filters" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+    </div>
     <div class="sb-stats">
       <div class="sb-stat"><span class="sb-n" id="stat-main">0</span> Los Santos</div>
       <div class="sb-stat"><span class="sb-n sb-nc" id="stat-cayo">0</span> Cayo</div>

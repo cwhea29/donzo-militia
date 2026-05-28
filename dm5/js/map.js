@@ -11,6 +11,11 @@ DM.map = (() => {
   let activeCategories = new Set(); // empty = show all
   let allCategories = Object.keys(CATS);
 
+  // Group filters state
+  let activeGroups = new Set();
+  let allGroups = []; // will be loaded from DB
+  let markerGroupsMap = new Map(); // markerId -> array of group names
+
   function el(id) { return document.getElementById(id); }
 
   // ── INIT ────────────────────────────────────────────────
@@ -19,8 +24,9 @@ DM.map = (() => {
     setupEvents();
     loadMap();
     if (DM.db && DM.db.listenMarkers) {
-      DM.db.listenMarkers(user, m => {
+      DM.db.listenMarkers(user, async (m) => {
         markers = m;
+        await refreshMarkerGroups();
         renderMarkers();
         renderSidebar();
         el('marker-count').textContent = m.length;
@@ -35,9 +41,14 @@ DM.map = (() => {
       if (b) b.classList.remove('hidden'); 
     }
 
-    // Initialize category filters
+    // Initialize filters
     activeCategories = new Set();
-    renderCategoryFilters();
+    activeGroups = new Set();
+
+    loadGroups().then(() => {
+      renderCategoryFilters();
+      renderGroupFilters();
+    });
   }
 
   // ── MAP IMG ─────────────────────────────────────────────
@@ -90,7 +101,13 @@ DM.map = (() => {
     document.querySelectorAll('.ztab').forEach(t => t.classList.remove('on'));
     btn.classList.add('on');
     scale = 1; px = 0; py = 0; applyT();
-    loadMap(); renderMarkers(); closePopup();
+    loadMap(); 
+    refreshMarkerGroups().then(() => {
+      renderMarkers(); 
+      renderSidebar();
+      renderGroupFilters();
+    });
+    closePopup();
     const zl = el('zone-lbl');
     zl.textContent = zone === 'cayo' ? 'CAYO PERICO' : 'LOS SANTOS';
     zl.className = 'sv' + (zone === 'cayo' ? ' cayo' : '');
@@ -432,7 +449,12 @@ DM.map = (() => {
 
     markers
       .filter(m => m.zone === curZone)
-      .filter(m => activeCategories.size === 0 || activeCategories.has(m.category))
+      .filter(m => {
+        const catMatch = activeCategories.size === 0 || activeCategories.has(m.category);
+        const groupNames = markerGroupsMap.get(m.id) || [];
+        const groupMatch = activeGroups.size === 0 || groupNames.some(g => activeGroups.has(g));
+        return catMatch && groupMatch;
+      })
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
@@ -666,13 +688,12 @@ DM.map = (() => {
         }
         renderCategoryFilters();
         renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
-        renderMarkers();   // ← Also filter the actual map pins
+        renderMarkers();
       };
 
       container.appendChild(btn);
     });
 
-    // Add "Clear" button if filtering
     if (activeCategories.size > 0) {
       const clearBtn = document.createElement('button');
       clearBtn.style.cssText = 'font-size: 9px; padding: 1px 5px; margin-left: 4px;';
@@ -685,6 +706,95 @@ DM.map = (() => {
       };
       container.appendChild(clearBtn);
     }
+  }
+
+  // ── GROUP FILTERS & MANAGEMENT ───────────────────────────
+  async function loadGroups() {
+    try {
+      allGroups = await DM.db.getGroups();
+    } catch (e) {
+      console.error('Failed to load groups', e);
+      allGroups = [];
+    }
+  }
+
+  async function refreshMarkerGroups() {
+    markerGroupsMap.clear();
+    const currentMarkers = markers.filter(m => m.zone === curZone);
+
+    for (const m of currentMarkers) {
+      try {
+        const groups = await DM.db.getMarkerGroups(m.id);
+        markerGroupsMap.set(m.id, groups.map(g => g.name));
+      } catch (e) {
+        markerGroupsMap.set(m.id, []);
+      }
+    }
+  }
+
+  function renderGroupFilters() {
+    const container = el('group-filters');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    allGroups.forEach(group => {
+      const isActive = activeGroups.size === 0 || activeGroups.has(group.id);
+
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        font-size: 10px; 
+        padding: 2px 6px; 
+        border: 1px solid ${isActive ? 'var(--tan-lt)' : 'var(--border)'}; 
+        background: ${isActive ? 'rgba(152,133,88,0.15)' : 'transparent'};
+        color: var(--text); 
+        cursor: pointer;
+        border-radius: 3px;
+      `;
+      btn.textContent = group.name;
+
+      btn.onclick = () => {
+        if (activeGroups.size === 0) {
+          activeGroups = new Set([group.id]);
+        } else if (activeGroups.has(group.id)) {
+          activeGroups.delete(group.id);
+          if (activeGroups.size === 0) activeGroups = new Set();
+        } else {
+          activeGroups.add(group.id);
+        }
+        renderGroupFilters();
+        renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+        renderMarkers();
+      };
+
+      container.appendChild(btn);
+    });
+
+    if (activeGroups.size > 0) {
+      const clearBtn = document.createElement('button');
+      clearBtn.style.cssText = 'font-size: 9px; padding: 1px 5px; margin-left: 4px;';
+      clearBtn.textContent = 'Clear';
+      clearBtn.onclick = () => {
+        activeGroups = new Set();
+        renderGroupFilters();
+        renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
+        renderMarkers();
+      };
+      container.appendChild(clearBtn);
+    }
+  }
+
+  function showCreateGroupModal() {
+    const name = prompt('Enter new group name (e.g. "Casino Heist", "Stores", "Banks"):');
+    if (!name || !name.trim()) return;
+
+    DM.db.createGroup(user, name.trim())
+      .then(newGroup => {
+        allGroups.push(newGroup);
+        toast(`Group "${newGroup.name}" created`);
+        renderGroupFilters();
+      })
+      .catch(e => toast('Failed to create group: ' + e.message));
   }
 
   async function deleteMarker() {
@@ -852,6 +962,6 @@ DM.map = (() => {
     closeAddModal, onImagePicked, removeImage, saveMarker,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
-    useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters
+    useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups
   };
 })();
