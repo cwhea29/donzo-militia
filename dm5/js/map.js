@@ -1377,24 +1377,27 @@ DM.map = (() => {
     const container = el('bug-reports-list');
     if (!container) return;
 
-    // Safety check: DM.db might not be initialized yet
+    // Safety check
     if (!window.DM || !DM.db || typeof DM.db.getBugReports !== 'function') {
-      container.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #e07070;">
-          Database not ready yet.<br>
-          Please wait a moment and try again.
-        </div>
-        <div style="text-align: center; margin-top: 12px;">
-          <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
-        </div>
-      `;
-
-      // Auto-retry once after a short delay
-      setTimeout(() => {
-        if (container && container.innerHTML.includes('Database not ready')) {
-          loadBugReports();
-        }
-      }, 1300);
+      if (attempt <= 5) {
+        container.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #e07070;">
+            Database is still initializing... (attempt ${attempt}/5)
+          </div>
+        `;
+        setTimeout(() => loadBugReports(attempt + 1), 1100);
+      } else {
+        container.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #e07070;">
+            Could not connect to the database after several attempts.<br>
+            Please hard refresh the page (Ctrl + Shift + R).
+          </div>
+          <div style="text-align: center; margin-top: 12px;">
+            <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Try Again</button>
+          </div>
+        `;
+      }
+      return;
       return;
     }
 

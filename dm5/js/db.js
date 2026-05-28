@@ -366,6 +366,37 @@ DM.db = (() => {
     return data;
   }
 
+  // ── BUG REPORTS ──────────────────────────────────────────
+  async function reportBug(report) {
+    try {
+      await dmDB.from('bug_reports').insert({
+        message: report.message || 'Unknown error',
+        stack: report.stack || null,
+        url: report.url || (typeof window !== 'undefined' ? window.location.href : null),
+        user_agent: (typeof navigator !== 'undefined' ? navigator.userAgent : null),
+        username: report.username || null,
+        user_level: report.userLevel || null,
+      });
+    } catch (e) {
+      console.error('Failed to send bug report to Supabase:', e);
+    }
+  }
+
+  async function getBugReports(limit = 100) {
+    const { data, error } = await dmDB
+      .from('bug_reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  async function deleteBugReport(id) {
+    const { error } = await dmDB.from('bug_reports').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
   return { 
     uploadImage, 
     listenMarkers, 
