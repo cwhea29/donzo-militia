@@ -392,8 +392,36 @@ DM.map = (() => {
   function renderMarkers() {
     const layer = el('marker-layer');
     layer.innerHTML = '';
-    const fills = { 1:'#4e6443', 2:'#2a6a8a', 3:'#8a7020', 4:'#8a2020' };
-    const strks = { 1:'#2e3d27', 2:'#1a4a6a', 3:'#5a4a10', 4:'#5a1010' };
+    
+    // High contrast colors for better visibility on satellite / dark maps
+    const fills = {
+      1:  '#f4e9d8',   // Light beige
+      2:  '#d4e6c3',
+      3:  '#a8d5a2',
+      4:  '#7fc97f',
+      5:  '#ffeb3b',   // Bright yellow
+      6:  '#ffc107',
+      7:  '#ff9800',
+      8:  '#ff5722',
+      9:  '#f44336',
+      10: '#e91e63',
+      11: '#9c27b0'    // Purple for highest (Boss)
+    };
+    
+    const strks = {
+      1:  '#8d7b5a',
+      2:  '#5a8a4a',
+      3:  '#4a7a3a',
+      4:  '#3a6a2a',
+      5:  '#c7a000',
+      6:  '#c77a00',
+      7:  '#c75a00',
+      8:  '#c72a00',
+      9:  '#a80000',
+      10: '#8a0040',
+      11: '#4a0050'
+    };
+
     markers.filter(m => m.zone === curZone).forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
@@ -401,11 +429,18 @@ DM.map = (() => {
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
       const s   = strks[m.min_access_level] || strks[1];
+
       div.innerHTML = `<div class="mpin">
         <svg viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 1C7.3 1 1 7.3 1 15c0 11 14 24 14 24S29 26 29 15C29 7.3 22.7 1 15 1z" fill="${f}" stroke="${s}" stroke-width="1.5"/>
-          <text x="15" y="18" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="Arial">${ico}</text>
-        </svg></div><div class="mpulse"></div>`;
+          <!-- White halo for better visibility on dark/satellite maps -->
+          <path d="M15 1C7.3 1 1 7.3 1 15c0 11 14 24 14 24S29 26 29 15C29 7.3 22.7 1 15 1z" fill="white"/>
+          <!-- Colored pin -->
+          <path d="M15 2.5C8.1 2.5 2.5 8.1 2.5 15c0 10.2 12.5 22 12.5 22s12.5-11.8 12.5-22c0-6.9-5.6-12.5-12.5-12.5z" fill="${f}" stroke="${s}" stroke-width="1.8"/>
+          <text x="15" y="18" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="Arial" font-weight="bold">${ico}</text>
+        </svg>
+      </div>
+      <div class="mpulse"></div>`;
+
       div.addEventListener('click', e => { e.stopPropagation(); showPopup(m, e); });
       layer.appendChild(div);
     });
