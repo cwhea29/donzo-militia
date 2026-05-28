@@ -302,7 +302,7 @@
           <!-- Populated by JS -->
         </div>
         <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
-          <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
+          <button onclick="if (DM && DM.map) DM.map.loadBugReports(1)" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
         </div>
       </div>
     </div>

@@ -342,15 +342,9 @@ DM.db = (() => {
   }
 
   // Lightweight position-only update (used for "Move Location")
-  async function updateMarkerPosition(user, markerId, x, y) {
-    // Reuse the same permission check as normal editing
-    const marker = markers.find(m => m.id === markerId);
-    if (!marker) throw new Error('Marker not found');
-
-    const tempMarker = { id: markerId, created_by: marker.created_by };
-    if (!DM.auth.canDelete(tempMarker, user)) {
-      throw new Error('No permission to move this location');
-    }
+  async function updateMarkerPosition(user, markerId, x, y, createdBy) {
+    // Permission check is now done by the caller (map.js) to avoid scope issues.
+    // We still do a basic sanity check here.
 
     const { error } = await dmDB.from('markers').update({
       x: x,

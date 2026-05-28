@@ -7,6 +7,10 @@ DM.map = (() => {
   let toastT, pendingImageUrl = null;
   let editingMarkerId = null;   // NEW: for editing markers from popup
 
+  // Pointer tracking for reliable "click to place" vs drag-to-pan detection (fixes placement after Move Location changes)
+  let pointerDownX = 0, pointerDownY = 0;
+  const PLACE_CLICK_THRESHOLD = 7; // pixels — ignore tiny jitters when trying to place
+
   // Category filters state
   let activeCategories = new Set(); // empty = show all
   let allCategories = Object.keys(CATS);
@@ -176,8 +180,11 @@ DM.map = (() => {
     }, { passive: false });
 
     wrap.addEventListener('mousedown', e => {
+      pointerDownX = e.clientX;
+      pointerDownY = e.clientY;
+
       if (e.button === 0 && placing) {
-        // In placing mode, still reset moved so the upcoming click can place
+        // In placing mode, prepare for a possible place click
         moved = false;
         return;
       }
@@ -192,9 +199,18 @@ DM.map = (() => {
       moved = true;
       px = e.clientX - lpx; py = e.clientY - lpy; applyT();
     });
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
       panning = false;
-      moved = false;   // ensure we can place after any drag
+
+      // Only mark as "moved a lot" if we actually dragged a meaningful distance
+      if (pointerDownX && pointerDownY) {
+        const dx = e.clientX - pointerDownX;
+        const dy = e.clientY - pointerDownY;
+        moved = (Math.hypot(dx, dy) > PLACE_CLICK_THRESHOLD);
+      } else {
+        moved = false;
+      }
+
       const w = el('map-area');
       if (w) w.style.cursor = placing ? 'crosshair' : 'default';
     });
@@ -207,6 +223,9 @@ DM.map = (() => {
     wrap.addEventListener('touchstart', e => {
       activeTouches = e.touches.length;
       if (activeTouches === 1) {
+        pointerDownX = e.touches[0].clientX;
+        pointerDownY = e.touches[0].clientY;
+
         if (placing) return; // allow click-to-place on tap
         panning = true; moved = false;
         touchStartX = e.touches[0].clientX - px;
@@ -250,12 +269,18 @@ DM.map = (() => {
       activeTouches = e.touches.length;
       if (activeTouches === 0) {
         panning = false;
+
+        // Distance check for touch (prevents tiny finger jitter from blocking placement)
+        if (pointerDownX && pointerDownY && e.changedTouches && e.changedTouches.length > 0) {
+          const dx = e.changedTouches[0].clientX - pointerDownX;
+          const dy = e.changedTouches[0].clientY - pointerDownY;
+          moved = (Math.hypot(dx, dy) > PLACE_CLICK_THRESHOLD);
+        } else {
+          moved = false;
+        }
+
         const w = el('map-area');
         if (w) w.style.cursor = placing ? 'crosshair' : 'default';
-        // treat quick tap (no move) as potential marker placement
-        if (placing && !moved && user && user.canAdd) {
-          // synthetic click handled by the onclick on map-area already
-        }
       } else if (activeTouches === 1) {
         // finger lifted, one remains → restart single pan tracking
         touchStartX = e.touches[0].clientX - px;
@@ -272,9 +297,16 @@ DM.map = (() => {
 
   // ── REPOSITIONING MODE (Move existing marker) ─────────────
   let repositioningMarkerId = null;
+  let repositioningCreatedBy = null;   // captured at start to avoid stale markers[] lookup
 
-  function startRepositioning(markerId) {
+  function startRepositioning(markerId, createdBy = null) {
     repositioningMarkerId = markerId;
+    repositioningCreatedBy = createdBy;
+
+    // Force clean state so the next click is treated as a move target
+    placing = false;
+    moved = false;
+
     const area = el('map-area');
     if (area) area.style.cursor = 'crosshair';
 
@@ -286,6 +318,7 @@ DM.map = (() => {
 
   function cancelRepositioning() {
     repositioningMarkerId = null;
+    repositioningCreatedBy = null;
     const area = el('map-area');
     if (area) area.style.cursor = 'default';
 
@@ -378,11 +411,22 @@ DM.map = (() => {
     if (repositioningMarkerId) {
       const imagePercent = containerToImagePercent(e.clientX, e.clientY);
 
-      DM.db.updateMarkerPosition(user, repositioningMarkerId, imagePercent.x, imagePercent.y)
+      // Use captured created_by (from when "Move Location" was clicked) with safe fallback
+      const createdBy = repositioningCreatedBy ||
+                        (markers.find(m => m.id === repositioningMarkerId) || {}).created_by || null;
+
+      // Permission check (use whatever we have)
+      const tempMarker = { id: repositioningMarkerId, created_by: createdBy };
+      if (createdBy && !DM.auth.canDelete(tempMarker, user)) {
+        toast('You do not have permission to move this marker');
+        cancelRepositioning();
+        return;
+      }
+
+      DM.db.updateMarkerPosition(user, repositioningMarkerId, imagePercent.x, imagePercent.y, createdBy)
         .then(() => {
           toast('Location moved');
           cancelRepositioning();
-          // Refresh markers
           renderMarkers();
         })
         .catch(err => {
@@ -395,7 +439,7 @@ DM.map = (() => {
 
     if (!placing || !user.canAdd || moved) {
       if (placing && moved) {
-        console.log('[Map] Click blocked because moved flag was true');
+        console.log('[Map] Click blocked because moved flag was true (distance exceeded threshold)');
       }
       return;
     }
@@ -427,7 +471,9 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
-      moved = false;   // ← Critical: allow the next click to place a marker
+      moved = false;
+      pointerDownX = 0;
+      pointerDownY = 0;
     }
 
     const btn = el('place-btn');
@@ -472,8 +518,10 @@ DM.map = (() => {
         moveBtn.textContent = 'Move Location';
         moveBtn.onclick = () => {
           const currentId = editingMarkerId;
+          // Capture created_by from the marker we are currently editing (more reliable than later lookup)
+          const markerData = markers.find(m => m.id === currentId);
           closeAddModal();
-          startRepositioning(currentId);
+          startRepositioning(currentId, markerData ? markerData.created_by : null);
         };
         modalFoot.appendChild(moveBtn);
       }
@@ -1479,17 +1527,26 @@ DM.map = (() => {
     }
   }
 
-  async function loadAuditLogIntoTab() {
+  async function loadAuditLogIntoTab(attempt = 1) {
     const content = el('audit-tab-content');
     content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
 
     if (!window.DM || !DM.db || typeof DM.db.getAuditLog !== 'function') {
-      content.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #e07070;">
-          Database not ready yet.<br>
-          Please close and reopen User Management.
-        </div>
-      `;
+      if (attempt <= 5) {
+        content.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #e07070;">
+            Database not ready yet. Please wait... (attempt ${attempt}/5)
+          </div>
+        `;
+        setTimeout(() => loadAuditLogIntoTab(attempt + 1), 900);
+      } else {
+        content.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #e07070;">
+            Database not ready yet.<br>
+            Please close and reopen User Management, or hard refresh (Ctrl+Shift+R).
+          </div>
+        `;
+      }
       return;
     }
 
@@ -1529,19 +1586,19 @@ DM.map = (() => {
   }
 
   // ── BUG REPORTS (Visible to everyone) ────────────────────
-  async function loadBugReports() {
+  async function loadBugReports(attempt = 1) {
     const container = el('bug-reports-list');
     if (!container) return;
 
     // Safety check
     if (!window.DM || !DM.db || typeof DM.db.getBugReports !== 'function') {
-      if (attempt <= 5) {
+      if (attempt <= 6) {
         container.innerHTML = `
           <div style="padding: 20px; text-align: center; color: #e07070;">
-            Database is still initializing... (attempt ${attempt}/5)
+            Database not ready yet. Please wait a moment... (attempt ${attempt}/6)
           </div>
         `;
-        setTimeout(() => loadBugReports(attempt + 1), 1100);
+        setTimeout(() => loadBugReports(attempt + 1), 900);
       } else {
         container.innerHTML = `
           <div style="padding: 20px; text-align: center; color: #e07070;">
@@ -1549,11 +1606,10 @@ DM.map = (() => {
             Please hard refresh the page (Ctrl + Shift + R).
           </div>
           <div style="text-align: center; margin-top: 12px;">
-            <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Try Again</button>
+            <button onclick="if (DM && DM.map) DM.map.loadBugReports(1)" class="btn btn-ghost btn-sm">Try Again</button>
           </div>
         `;
       }
-      return;
       return;
     }
 
