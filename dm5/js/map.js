@@ -1288,6 +1288,16 @@ DM.map = (() => {
     const content = el('audit-tab-content');
     content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
 
+    if (!window.DM || !DM.db || typeof DM.db.getAuditLog !== 'function') {
+      content.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #e07070;">
+          Database not ready yet.<br>
+          Please close and reopen User Management.
+        </div>
+      `;
+      return;
+    }
+
     try {
       const logs = await DM.db.getAuditLog(100);
 
@@ -1327,6 +1337,20 @@ DM.map = (() => {
   async function loadBugReports() {
     const container = el('bug-reports-list');
     if (!container) return;
+
+    // Safety check: DM.db might not be initialized yet
+    if (!window.DM || !DM.db || typeof DM.db.getBugReports !== 'function') {
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #e07070;">
+          Database not ready yet.<br>
+          Please wait a moment and try again.
+        </div>
+        <div style="text-align: center; margin-top: 12px;">
+          <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Loading bug reports...</div>';
 
