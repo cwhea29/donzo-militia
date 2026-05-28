@@ -303,6 +303,9 @@ DM.map = (() => {
     repositioningMarkerId = markerId;
     repositioningCreatedBy = createdBy;
 
+    // Force clean 1:1 view so coordinate math is accurate (prevents "click lands in wrong place" under zoom/pan)
+    resetView();
+
     // Force clean state so the next click is treated as a move target
     placing = false;
     moved = false;
@@ -313,7 +316,7 @@ DM.map = (() => {
     el('sdot').className = 'sdot placing';
     el('smode').textContent = 'MOVING MARKER';
 
-    toast('Click on the map to set the new position (ESC to cancel)');
+    toast('View reset for accuracy. Click on the map to set the new position (ESC to cancel)');
   }
 
   function cancelRepositioning() {
@@ -471,6 +474,9 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
+      // Reset to 1:1 view — this makes the click-to-image math trustworthy.
+      // Without this, zoomed/panned state makes clicks land in completely different visual spots.
+      resetView();
       moved = false;
       pointerDownX = 0;
       pointerDownY = 0;
@@ -482,7 +488,7 @@ DM.map = (() => {
     el('map-area').style.cursor = placing ? 'crosshair' : 'default';
     el('sdot').className    = 'sdot' + (placing ? ' placing' : '');
     el('smode').textContent = placing ? 'PLACING MARKER' : 'VIEW MODE';
-    toast(placing ? 'CLICK ON THE MAP TO PLACE A MARKER' : 'PLACING MODE OFF');
+    toast(placing ? 'VIEW RESET — CLICK EXACTLY WHERE YOU WANT THE MARKER' : 'PLACING MODE OFF');
   }
 
   // ── ADD / EDIT MODAL ─────────────────────────────────────
