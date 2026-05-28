@@ -1258,16 +1258,16 @@ DM.map = (() => {
 
     const userLevel = user?.level ?? 0;
 
-    // Audit Log: Visible for Chief+ (Level 8 and above)
+    // Audit Log: ONLY for Boss (Level 11)
     if (auditTab) {
-      const shouldShowAudit = userLevel >= 8;
+      const shouldShowAudit = userLevel === 11;
       auditTab.style.display = shouldShowAudit ? 'block' : 'none';
       console.log('[User Management] Audit Log tab visible for level', userLevel, ':', shouldShowAudit);
     }
 
-    // Bugs tab: ONLY for Boss (Level 11)
+    // Bugs tab: Visible to everyone (all logged-in users)
     if (bugsTab) {
-      const shouldShowBugs = userLevel === 11;
+      const shouldShowBugs = !!user; // any logged-in user
       bugsTab.style.display = shouldShowBugs ? 'block' : 'none';
       console.log('[User Management] Bugs tab visible for level', userLevel, ':', shouldShowBugs);
     }
@@ -1301,8 +1301,8 @@ DM.map = (() => {
     } 
     else if (tab === 'audit') {
       const userLevel = user?.level ?? 0;
-      if (userLevel < 8) {
-        toast('Only Chief and higher can view the Audit Log');
+      if (userLevel !== 11) {
+        toast('Only the Boss can view the Audit Log');
         switchUserModalTab('users');
         return;
       }
@@ -1311,12 +1311,7 @@ DM.map = (() => {
       loadAuditLogIntoTab();
     } 
     else if (tab === 'bugs') {
-      const userLevel = user?.level ?? 0;
-      if (userLevel !== 11) {
-        toast('Only the Boss can access the Bugs section');
-        switchUserModalTab('users');
-        return;
-      }
+      // Bugs tab is now open to all logged-in users
       bugsContent.style.display = 'block';
       if (bugsTab) bugsTab.style.borderBottom = '2px solid #e07070';
       loadBugReports();
