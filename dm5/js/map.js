@@ -471,7 +471,9 @@ DM.map = (() => {
         return `<div class="urow">
           <div><div class="u-name">${u.display_name||u.username}</div><div class="u-un">@${u.username}</div></div>
           <select class="u-lvl" data-id="${u.id}" onchange="DM.map.changeLevel(this)">
-            ${[1,2,3,4].map(l=>`<option value="${l}" ${u.access_level===l?'selected':''}>${l} — ${ACCESS[l].name}</option>`).join('')}
+            ${Object.keys(ACCESS).map(Number).sort((a,b)=>a-b).map(l => 
+              `<option value="${l}" ${u.access_level===l ? 'selected' : ''}>${l} — ${ACCESS[l].name}</option>`
+            ).join('')}
           </select>
           <button class="u-del" onclick="DM.map.removeUser('${u.id}','${u.username}')">✕</button>
         </div>`;
