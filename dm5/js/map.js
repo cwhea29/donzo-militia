@@ -5,6 +5,7 @@ DM.map = (() => {
   let scale = 1, px = 0, py = 0;
   let panning = false, moved = false, lpx = 0, lpy = 0;
   let toastT, pendingImageUrl = null;
+  let editingMarkerId = null;   // NEW: for editing markers from popup
 
   function el(id) { return document.getElementById(id); }
 
@@ -238,14 +239,42 @@ DM.map = (() => {
     toast(placing ? 'CLICK ON THE MAP TO PLACE A MARKER' : 'PLACING MODE OFF');
   }
 
-  // ── ADD MODAL ────────────────────────────────────────────
-  function openAddModal() {
-    el('m-name').value = '';
-    el('m-desc').value = '';
-    el('m-cat').value  = 'poi';
-    el('m-vis').value  = '1';
-    pendingImageUrl    = null;
-    resetImageUpload();
+  // ── ADD / EDIT MODAL ─────────────────────────────────────
+  function openAddModal(markerToEdit = null) {
+    editingMarkerId = markerToEdit ? markerToEdit.id : null;
+
+    if (markerToEdit) {
+      // Editing existing marker
+      el('m-name').value = markerToEdit.name || '';
+      el('m-desc').value = markerToEdit.description || '';
+      el('m-cat').value  = markerToEdit.category || 'poi';
+      el('m-vis').value  = markerToEdit.min_access_level || '1';
+      pendingImageUrl    = markerToEdit.image_url || null;
+
+      // Show existing image if any
+      const preview = el('img-preview');
+      if (markerToEdit.image_url) {
+        preview.innerHTML = `<img src="${markerToEdit.image_url}" alt="current">`;
+        preview.classList.add('has-img');
+        el('img-remove').classList.remove('hidden');
+      } else {
+        resetImageUpload();
+      }
+
+      el('save-btn').textContent = 'UPDATE LOCATION';
+      el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
+    } else {
+      // Creating new
+      el('m-name').value = '';
+      el('m-desc').value = '';
+      el('m-cat').value  = 'poi';
+      el('m-vis').value  = '1';
+      pendingImageUrl    = null;
+      resetImageUpload();
+      el('save-btn').textContent = 'SAVE LOCATION';
+      el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
+    }
+
     el('add-modal').classList.remove('hidden');
     el('m-name').focus();
   }
@@ -254,6 +283,9 @@ DM.map = (() => {
     el('add-modal').classList.add('hidden');
     pending = null;
     pendingImageUrl = null;
+    editingMarkerId = null;
+    el('save-btn').textContent = 'SAVE LOCATION';
+    el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
   }
 
   function resetImageUpload() {
@@ -315,21 +347,36 @@ DM.map = (() => {
     btn.innerHTML = '<span class="spin"></span>SAVING...'; btn.disabled = true;
 
     try {
-      await DM.db.addMarker(user, {
-        name,
-        zone:        curZone,
-        description: el('m-desc').value.trim(),
-        imageUrl:    pendingImageUrl || '',
-        category:    el('m-cat').value,
-        minLevel:    el('m-vis').value,
-        x: pending.x, y: pending.y
-      });
+      if (editingMarkerId) {
+        // Editing existing marker
+        await DM.db.updateMarker(user, editingMarkerId, {
+          name,
+          description: el('m-desc').value.trim(),
+          imageUrl:    pendingImageUrl || '',
+          category:    el('m-cat').value,
+          minLevel:    el('m-vis').value,
+          created_by:  markers.find(x => x.id === editingMarkerId)?.created_by
+        });
+        toast('✓ LOCATION UPDATED');
+      } else {
+        // Creating new
+        await DM.db.addMarker(user, {
+          name,
+          zone:        curZone,
+          description: el('m-desc').value.trim(),
+          imageUrl:    pendingImageUrl || '',
+          category:    el('m-cat').value,
+          minLevel:    el('m-vis').value,
+          x: pending.x, y: pending.y
+        });
+        toast('✓ LOCATION SAVED — ' + name.toUpperCase());
+      }
+
       closeAddModal();
       if (placing) togglePlace();
-      toast('✓ LOCATION SAVED — ' + name.toUpperCase());
     } catch (e) { 
       console.error('Failed to save marker:', e);
-      toast('Error saving location: ' + e.message + ' (Check if RLS is disabled on markers table)'); 
+      toast('Error: ' + e.message); 
     }
     finally { btn.textContent = 'SAVE LOCATION'; btn.disabled = false; }
   }
@@ -381,9 +428,18 @@ DM.map = (() => {
       ? `<img class="popup-img" src="${m.image_url}" alt="${m.name}" onerror="this.parentElement.innerHTML='<div class=popup-noimg>// IMAGE NOT FOUND</div>'">`
       : '<div class="popup-noimg">// NO IMAGE</div>';
 
-    DM.auth.canDelete(m, user)
-      ? el('pp-foot').classList.remove('hidden')
-      : el('pp-foot').classList.add('hidden');
+    const canManage = DM.auth.canDelete(m, user);
+
+    const foot = el('pp-foot');
+    if (canManage) {
+      foot.classList.remove('hidden');
+      foot.innerHTML = `
+        <button class="btn btn-ghost" onclick="DM.map.editMarker('${m.id}')">✏️ Edit</button>
+        <button class="btn-danger" onclick="DM.map.deleteMarker()">🗑 Delete</button>
+      `;
+    } else {
+      foot.classList.add('hidden');
+    }
 
     popup.classList.remove('hidden');
     const pw=300, ph=420;
@@ -402,6 +458,13 @@ DM.map = (() => {
     if (!m || !confirm(`Delete "${m.name}"?`)) return;
     try { await DM.db.deleteMarker(user, m); closePopup(); toast('LOCATION DELETED'); }
     catch (e) { toast('Error: ' + e.message); }
+  }
+
+  function editMarker(id) {
+    const m = markers.find(x => x.id === id);
+    if (!m) return;
+    closePopup();
+    openAddModal(m);
   }
 
   // ── SIDEBAR ──────────────────────────────────────────────
@@ -548,7 +611,7 @@ DM.map = (() => {
     init, swapLayer, swapZone, togglePlace, onMapClick, onMouseMove,
     closeAddModal, onImagePicked, removeImage, saveMarker,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
-    deleteMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
+    deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap
   };
 })();

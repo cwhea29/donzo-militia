@@ -70,6 +70,25 @@ DM.db = (() => {
     if (error) throw new Error(error.message);
   }
 
+  async function updateMarker(user, markerId, m) {
+    // Reuse delete permission for edit permission (creator or high rank)
+    const tempMarker = { id: markerId, created_by: m.created_by };
+    if (!DM.auth.canDelete(tempMarker, user)) throw new Error('No permission to edit this location');
+
+    const { error } = await dmDB.from('markers').update({
+      name:             m.name,
+      description:      m.description    || '',
+      image_url:        m.imageUrl       || '',
+      category:         m.category       || 'poi',
+      min_access_level: parseInt(m.minLevel) || 1,
+    }).eq('id', markerId);
+
+    if (error) {
+      console.error('Supabase markers update failed:', error);
+      throw new Error(error.message || 'Update failed');
+    }
+  }
+
   // ── USERS ────────────────────────────────────────────────
 
   async function getUsers() {
@@ -107,5 +126,5 @@ DM.db = (() => {
     if (error) throw new Error(error.message);
   }
 
-  return { uploadImage, listenMarkers, addMarker, deleteMarker, getUsers, addUser, updateLevel, deleteUser };
+  return { uploadImage, listenMarkers, addMarker, deleteMarker, updateMarker, getUsers, addUser, updateLevel, deleteUser };
 })();
