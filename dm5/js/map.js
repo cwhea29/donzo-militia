@@ -143,6 +143,8 @@ DM.map = (() => {
   }
 
   function swapZone(zone, btn) {
+    if (repositioningMarkerId) cancelRepositioning();
+
     curZone = zone;
     document.querySelectorAll('.ztab').forEach(t => t.classList.remove('on'));
     btn.classList.add('on');
@@ -268,6 +270,29 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
+  // ── REPOSITIONING MODE (Move existing marker) ─────────────
+  let repositioningMarkerId = null;
+
+  function startRepositioning(markerId) {
+    repositioningMarkerId = markerId;
+    const area = el('map-area');
+    if (area) area.style.cursor = 'crosshair';
+
+    el('sdot').className = 'sdot placing';
+    el('smode').textContent = 'MOVING MARKER';
+
+    toast('Click on the map to set the new position (ESC to cancel)');
+  }
+
+  function cancelRepositioning() {
+    repositioningMarkerId = null;
+    const area = el('map-area');
+    if (area) area.style.cursor = 'default';
+
+    el('sdot').className = 'sdot';
+    el('smode').textContent = 'VIEW MODE';
+  }
+
   // Calculate the actual displayed rectangle of the map image inside the container
   // (accounts for object-fit: contain)
   function getDisplayedImageRect() {
@@ -349,6 +374,25 @@ DM.map = (() => {
 
   // ── CLICK / MOVE ─────────────────────────────────────────
   function onMapClick(e) {
+    // Handle repositioning mode first (moving existing marker)
+    if (repositioningMarkerId) {
+      const imagePercent = containerToImagePercent(e.clientX, e.clientY);
+
+      DM.db.updateMarkerPosition(user, repositioningMarkerId, imagePercent.x, imagePercent.y)
+        .then(() => {
+          toast('Location moved');
+          cancelRepositioning();
+          // Refresh markers
+          renderMarkers();
+        })
+        .catch(err => {
+          toast('Failed to move marker: ' + err.message);
+          cancelRepositioning();
+        });
+
+      return;
+    }
+
     if (!placing || !user.canAdd || moved) {
       if (placing && moved) {
         console.log('[Map] Click blocked because moved flag was true');
@@ -356,7 +400,7 @@ DM.map = (() => {
       return;
     }
 
-    // Use image-relative coordinates instead of raw container percentages
+    // Normal placement
     const imagePercent = containerToImagePercent(e.clientX, e.clientY);
     pending = { x: imagePercent.x, y: imagePercent.y };
     openAddModal();
@@ -372,6 +416,10 @@ DM.map = (() => {
 
   // ── PLACE MODE ───────────────────────────────────────────
   function togglePlace() {
+    if (repositioningMarkerId) {
+      cancelRepositioning();
+    }
+
     if (!user.canAdd) {
       toast('You do not have permission to place markers (requires Lieutenant or higher)');
       return;
@@ -415,6 +463,20 @@ DM.map = (() => {
 
       el('save-btn').textContent = 'UPDATE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
+
+      // Add "Move Location" button (only once)
+      const modalFoot = el('add-modal').querySelector('.modal-foot');
+      if (modalFoot && !modalFoot.querySelector('.move-location-btn')) {
+        const moveBtn = document.createElement('button');
+        moveBtn.className = 'btn btn-ghost btn-sm move-location-btn';
+        moveBtn.textContent = 'Move Location';
+        moveBtn.onclick = () => {
+          const currentId = editingMarkerId;
+          closeAddModal();
+          startRepositioning(currentId);
+        };
+        modalFoot.appendChild(moveBtn);
+      }
     } else {
       // Creating new
       el('m-name').value = '';
@@ -439,6 +501,12 @@ DM.map = (() => {
     pending = null;
     pendingImageUrl = null;
     editingMarkerId = null;
+
+    // Remove any dynamically added Move button
+    const modalFoot = el('add-modal').querySelector('.modal-foot');
+    const moveBtn = modalFoot?.querySelector('.move-location-btn');
+    if (moveBtn) moveBtn.remove();
+
     el('save-btn').textContent = 'SAVE LOCATION';
     el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
   }
@@ -1625,7 +1693,12 @@ DM.map = (() => {
       const addM = el('add-modal');
       const userM = el('user-modal');
       const pop = el('popup');
-      if (!addM.classList.contains('hidden')) closeAddModal();
+
+      if (repositioningMarkerId) {
+        cancelRepositioning();
+        toast('Move cancelled');
+      } 
+      else if (!addM.classList.contains('hidden')) closeAddModal();
       else if (!userM.classList.contains('hidden')) closeUsers();
       else if (!pop.classList.contains('hidden')) closePopup();
       else if (placing) togglePlace();
@@ -1651,6 +1724,7 @@ DM.map = (() => {
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
     openAuditLogFromNav, openBugsFromNav, deleteBugReport,
     // Exposed for debugging if needed
-    getDisplayedImageRect, containerToImagePercent, imageToContainerPercent, syncMarkerGroups, loadGroupSelectionForModal
+    getDisplayedImageRect, containerToImagePercent, imageToContainerPercent,
+    startRepositioning, cancelRepositioning, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();

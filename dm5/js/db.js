@@ -341,6 +341,31 @@ DM.db = (() => {
     });
   }
 
+  // Lightweight position-only update (used for "Move Location")
+  async function updateMarkerPosition(user, markerId, x, y) {
+    // Reuse the same permission check as normal editing
+    const marker = markers.find(m => m.id === markerId);
+    if (!marker) throw new Error('Marker not found');
+
+    const tempMarker = { id: markerId, created_by: marker.created_by };
+    if (!DM.auth.canDelete(tempMarker, user)) {
+      throw new Error('No permission to move this location');
+    }
+
+    const { error } = await dmDB.from('markers').update({
+      x: x,
+      y: y,
+      updated_at: new Date().toISOString()
+    }).eq('id', markerId);
+
+    if (error) {
+      console.error('Position update failed:', error);
+      throw new Error(error.message || 'Failed to move marker');
+    }
+
+    await logAudit(markerId, 'update', user.username, { action: 'moved position' });
+  }
+
   // ── ENHANCED ADD (with audit) ────────────────────────────
   async function addMarker(user, m) {
     if (!user.canAdd) throw new Error('Insufficient access level');
@@ -429,6 +454,7 @@ DM.db = (() => {
     // Bug Reports
     reportBug,
     getBugReports,
-    deleteBugReport
+    deleteBugReport,
+    updateMarkerPosition
   };
 })();
