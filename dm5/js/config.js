@@ -11,10 +11,17 @@ const SUPABASE_KEY   = 'sb_publishable_VeM0fsus2vSjZ1vIZyBGtg_ypXSWEMm';
 const STORAGE_BUCKET = 'marker-images';
 
 const ACCESS = {
-  1: { name:'Recruit',    color:'#8a9a7a', bg:'rgba(138,154,122,0.15)', add:false, delOwn:false, delAll:false },
-  2: { name:'Operative',  color:'#4e6443', bg:'rgba(78,100,67,0.15)',   add:false, delOwn:false, delAll:false },
-  3: { name:'Lieutenant', color:'#c9a84c', bg:'rgba(201,168,76,0.15)',  add:true,  delOwn:true,  delAll:false },
-  4: { name:'Commander',  color:'#c0392b', bg:'rgba(192,57,43,0.15)',   add:true,  delOwn:true,  delAll:true  }
+  1:  { name:'Hangy',      color:'#6b5b4f', bg:'rgba(107,91,79,0.15)',   add:false, delOwn:false, delAll:false },
+  2:  { name:'Cadet',      color:'#8a7a6a', bg:'rgba(138,122,106,0.15)', add:false, delOwn:false, delAll:false },
+  3:  { name:'Private',    color:'#7a9a6a', bg:'rgba(122,154,106,0.15)', add:false, delOwn:false, delAll:false },
+  4:  { name:'Gunner',     color:'#5a8a5a', bg:'rgba(90,138,90,0.15)',   add:true,  delOwn:false, delAll:false },
+  5:  { name:'Corporal',   color:'#4e7a4e', bg:'rgba(78,122,78,0.15)',   add:true,  delOwn:true,  delAll:false },
+  6:  { name:'Commander',  color:'#c9a84c', bg:'rgba(201,168,76,0.15)',  add:true,  delOwn:true,  delAll:false },
+  7:  { name:'Captain',    color:'#b87a3a', bg:'rgba(184,122,58,0.15)',  add:true,  delOwn:true,  delAll:false },
+  8:  { name:'Chief',      color:'#a05a2a', bg:'rgba(160,90,42,0.15)',   add:true,  delOwn:true,  delAll:true  },
+  9:  { name:'Warboss',    color:'#8a3a3a', bg:'rgba(138,58,58,0.15)',   add:true,  delOwn:true,  delAll:true  },
+  10: { name:'Underboss',  color:'#6a2a5a', bg:'rgba(106,42,90,0.15)',   add:true,  delOwn:true,  delAll:true  },
+  11: { name:'Boss',       color:'#c0392b', bg:'rgba(192,57,43,0.15)',   add:true,  delOwn:true,  delAll:true  }
 };
 
 const VIS = {
@@ -38,13 +45,18 @@ const MAPS = {
 };
 
 const CATS = {
-  poi:     { icon:'📍', label:'Point of Interest' },
-  base:    { icon:'🏠', label:'Base / Safe House'  },
-  mission: { icon:'🎯', label:'Mission Location'   },
-  loot:    { icon:'💰', label:'Loot / Stash'       },
-  danger:  { icon:'⚠️', label:'Danger Zone'        },
-  vehicle: { icon:'🚗', label:'Vehicle Spawn'      },
-  other:   { icon:'📌', label:'Other'              }
+  poi:         { icon:'📍', label:'Point of Interest' },
+  base:        { icon:'🏠', label:'Base / Safe House'  },
+  mission:     { icon:'🎯', label:'Mission Location'   },
+  heist:       { icon:'💥', label:'Heist Starting Point' },
+  extraction:  { icon:'🚁', label:'Extraction Point'   },
+  loot:        { icon:'💰', label:'Loot / Stash'       },
+  drop:        { icon:'📦', label:'Supply Drop / Cache' },
+  danger:      { icon:'⚠️', label:'Danger Zone'        },
+  ambush:      { icon:'🔫', label:'Ambush Site'        },
+  surveillance:{ icon:'👁️', label:'Surveillance Point' },
+  vehicle:     { icon:'🚗', label:'Vehicle Spawn'      },
+  other:       { icon:'📌', label:'Other'              }
 };
 
 // Initialize the global DM namespace (only once, across all scripts)
