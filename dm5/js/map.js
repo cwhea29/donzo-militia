@@ -16,6 +16,9 @@ DM.map = (() => {
   let allGroups = []; // will be loaded from DB
   let markerGroupsMap = new Map(); // markerId -> array of group names
 
+  // Temporary state for group selection in the Add/Edit modal
+  let modalSelectedGroups = new Set();
+
   function el(id) { return document.getElementById(id); }
 
   // ── INIT ────────────────────────────────────────────────
@@ -300,6 +303,9 @@ DM.map = (() => {
       el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
     }
 
+    // Load current groups for this marker (if editing)
+    loadGroupSelectionForModal(markerToEdit ? markerToEdit.id : null);
+
     el('add-modal').classList.remove('hidden');
     el('m-name').focus();
   }
@@ -379,6 +385,8 @@ DM.map = (() => {
     console.log('[saveMarker] Called. editingMarkerId =', editingMarkerId);
 
     try {
+      let savedMarkerId = editingMarkerId;
+
       if (editingMarkerId) {
         // Editing existing marker
         await DM.db.updateMarker(user, editingMarkerId, {
@@ -392,7 +400,7 @@ DM.map = (() => {
         toast('✓ LOCATION UPDATED');
       } else {
         // Creating new
-        await DM.db.addMarker(user, {
+        const newMarker = await DM.db.addMarker(user, {
           name,
           zone:        curZone,
           description: el('m-desc').value.trim(),
@@ -401,7 +409,13 @@ DM.map = (() => {
           minLevel:    el('m-vis').value,
           x: pending.x, y: pending.y
         });
+        savedMarkerId = newMarker.id;
         toast('✓ LOCATION SAVED — ' + name.toUpperCase());
+      }
+
+      // Sync group assignments
+      if (savedMarkerId) {
+        await syncMarkerGroups(savedMarkerId);
       }
 
       closeAddModal();
@@ -739,7 +753,7 @@ DM.map = (() => {
     container.innerHTML = '';
 
     allGroups.forEach(group => {
-      const isActive = activeGroups.size === 0 || activeGroups.has(group.id);
+      const isActive = activeGroups.size === 0 || activeGroups.has(group.name);
 
       const btn = document.createElement('button');
       btn.style.cssText = `
@@ -755,12 +769,12 @@ DM.map = (() => {
 
       btn.onclick = () => {
         if (activeGroups.size === 0) {
-          activeGroups = new Set([group.id]);
-        } else if (activeGroups.has(group.id)) {
-          activeGroups.delete(group.id);
+          activeGroups = new Set([group.name]);
+        } else if (activeGroups.has(group.name)) {
+          activeGroups.delete(group.name);
           if (activeGroups.size === 0) activeGroups = new Set();
         } else {
-          activeGroups.add(group.id);
+          activeGroups.add(group.name);
         }
         renderGroupFilters();
         renderSidebar(el('sb-search')?.querySelector('input')?.value || '');
@@ -795,6 +809,87 @@ DM.map = (() => {
         renderGroupFilters();
       })
       .catch(e => toast('Failed to create group: ' + e.message));
+  }
+
+  async function loadGroupSelectionForModal(markerId = null) {
+    const container = el('modal-group-checkboxes');
+    if (!container) return;
+
+    container.innerHTML = '';
+    modalSelectedGroups = new Set();
+
+    if (allGroups.length === 0) {
+      await loadGroups();
+    }
+
+    // If editing, pre-load current groups for this marker
+    if (markerId) {
+      try {
+        const currentGroups = await DM.db.getMarkerGroups(markerId);
+        currentGroups.forEach(g => modalSelectedGroups.add(g.name));
+      } catch (e) {
+        console.warn('Could not load current groups for marker', e);
+      }
+    }
+
+    allGroups.forEach(group => {
+      const isChecked = modalSelectedGroups.has(group.name);
+
+      const wrapper = document.createElement('label');
+      wrapper.style.cssText = 'display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = isChecked;
+      checkbox.onchange = () => {
+        if (checkbox.checked) {
+          modalSelectedGroups.add(group.name);
+        } else {
+          modalSelectedGroups.delete(group.name);
+        }
+      };
+
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(document.createTextNode(group.name));
+
+      container.appendChild(wrapper);
+    });
+  }
+
+  async function syncMarkerGroups(markerId) {
+    try {
+      // Get current groups from DB
+      const currentGroupObjects = await DM.db.getMarkerGroups(markerId);
+      const currentNames = currentGroupObjects.map(g => g.name);
+
+      // Find groups to remove
+      const toRemove = currentNames.filter(name => !modalSelectedGroups.has(name));
+
+      // Find groups to add
+      const toAdd = [...modalSelectedGroups].filter(name => !currentNames.includes(name));
+
+      // Remove old ones
+      for (const name of toRemove) {
+        const group = allGroups.find(g => g.name === name);
+        if (group) {
+          await DM.db.removeMarkerFromGroup(markerId, group.id);
+        }
+      }
+
+      // Add new ones
+      for (const name of toAdd) {
+        const group = allGroups.find(g => g.name === name);
+        if (group) {
+          await DM.db.addMarkerToGroup(markerId, group.id);
+        }
+      }
+
+      // Refresh local cache
+      await refreshMarkerGroups();
+    } catch (e) {
+      console.error('Failed to sync groups for marker', e);
+      toast('Warning: Could not update group assignments');
+    }
   }
 
   // ── HEIST PLANS UI ───────────────────────────────────────
@@ -1157,6 +1252,6 @@ DM.map = (() => {
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
-    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan
+    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();
