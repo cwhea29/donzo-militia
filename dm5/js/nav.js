@@ -18,10 +18,10 @@ DM.nav = (() => {
     el.innerHTML = `
       <nav class="top-nav">
         <div class="nav-brand">
-          <img class="nav-logo" src="images/DM_2.png" alt="Donzo Militia" onerror="this.style.display='none'">
+          <img class="nav-logo" src="images/DM_2.png" alt="Donzo" onerror="this.style.display='none'">
           <div>
             <div class="nav-org">DONZO</div>
-            <div class="nav-sub">LOS SANTOS OPS</div>
+            <div class="nav-sub">Pack Watch</div>
           </div>
         </div>
         <div class="nav-links">

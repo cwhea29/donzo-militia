@@ -16,119 +16,16 @@
     <div class="phi">⚙️</div>
     <div>
       <div class="pt">CRAFTING</div>
-      <div class="ps">// Item crafting reference & recipes</div>
       <div class="pv">// WORK IN PROGRESS</div>
     </div>
   </div>
 
-  <div class="ptabs">
-    <button class="ptab on"  onclick="sw('weapons',this)">⚔️ Weapons</button>
-    <button class="ptab"     onclick="sw('ammo',this)">🔫 Ammo</button>
-    <button class="ptab"     onclick="sw('armor',this)">🛡️ Armor</button>
-    <button class="ptab"     onclick="sw('explosives',this)">💣 Explosives</button>
-    <button class="ptab"     onclick="sw('supplies',this)">🎒 Supplies</button>
-    <button class="ptab"     onclick="sw('vehicles',this)">🚗 Vehicles</button>
+  <div style="text-align: center; margin-top: 100px; font-size: 28px; color: var(--muted); letter-spacing: 2px;">
+    WORK IN PROGRESS
   </div>
 
-  <!-- ══════════════════════════════════════════════════════
-       WEAPONS
-       Add content below the comment in each tab section.
-
-       Example card:
-       <div class="grid">
-         <div class="card">
-           <span class="cico">🔫</span>
-           <div class="cttl">PISTOL MK II</div>
-           <div class="cbdy">Materials: Pistol ×1, Components ×3<br>Cost: $10,000<br>Location: Bunker</div>
-         </div>
-       </div>
-
-       Example table:
-       <table class="tbl">
-         <thead><tr><th>Item</th><th>Materials</th><th>Cost</th><th>Where</th></tr></thead>
-         <tbody>
-           <tr><td>Pistol Mk II</td><td>Pistol ×1</td><td>$10,000</td><td>Bunker</td></tr>
-         </tbody>
-       </table>
-  ══════════════════════════════════════════════════════ -->
-
-  <div class="tabpanel on" id="tab-weapons">
-    <div class="psec">
-      <div class="sttl">⚔️ Weapons</div>
-      <div class="grid">
-        <div class="card"><span class="cico">🔫</span><div class="cttl">AP PISTOL</div><div class="cbdy">Materials: Pistol ×1, Extended Clip ×2<br>Cost: $8,500 • Time: 12m<br>Req: LVL 2 • Location: La Puerta Warehouse</div></div>
-        <div class="card"><span class="cico">🔫</span><div class="cttl">COMBAT PISTOL MK II</div><div class="cbdy">Materials: Combat Pistol ×1, Suppressor ×1, Grip ×2<br>Cost: $14,200 • Time: 22m<br>Req: LVL 2 • Location: Bunker</div></div>
-        <div class="card"><span class="cico">🔫</span><div class="cttl">MICRO SMG</div><div class="cbdy">Materials: SMG Body ×1, Rapid Fire Kit ×1<br>Cost: $11,800 • Time: 18m<br>Req: LVL 1 • Location: Little Seoul Armory</div></div>
-        <div class="card"><span class="cico">🔫</span><div class="cttl">ASSAULT RIFLE</div><div class="cbdy">Materials: Rifle Frame ×1, Scope ×1, Stock ×1<br>Cost: $24,500 • Time: 35m<br>Req: LVL 3 • Location: Fort Zancudo Drop</div></div>
-        <div class="card"><span class="cico">🔫</span><div class="cttl">CARBINE RIFLE MK II</div><div class="cbdy">Materials: Carbine ×1, Heavy Grip ×2, Flashlight ×1<br>Cost: $31,000 • Time: 45m<br>Req: LVL 3 • Location: Sandy Shores Facility</div></div>
-        <div class="card"><span class="cico">🔫</span><div class="cttl">HEAVY SNIPER</div><div class="cbdy">Materials: Sniper Chassis ×1, Long Barrel ×1<br>Cost: $42,000 • Time: 55m<br>Req: LVL 3 • Location: Mount Chiliad Overlook</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabpanel" id="tab-ammo">
-    <div class="psec">
-      <div class="sttl">🔫 Ammunition</div>
-      <div class="grid">
-        <div class="card"><span class="cico">📦</span><div class="cttl">9MM AMMO (x50)</div><div class="cbdy">Materials: Brass ×30, Gunpowder ×15<br>Cost: $1,800 • Time: 6m<br>Req: LVL 1 • Location: Any Safehouse</div></div>
-        <div class="card"><span class="cico">📦</span><div class="cttl">5.56 NATO (x60)</div><div class="cbdy">Materials: Rifle Brass ×40, Propellant ×22<br>Cost: $3,400 • Time: 11m<br>Req: LVL 2 • Location: Bunker</div></div>
-        <div class="card"><span class="cico">📦</span><div class="cttl">.308 MATCH (x20)</div><div class="cbdy">Materials: Precision Brass ×15, High-Grade Powder ×10<br>Cost: $4,900 • Time: 14m<br>Req: LVL 2 • Location: Paleto Armory</div></div>
-        <div class="card"><span class="cico">📦</span><div class="cttl">12GA BUCKSHOT (x25)</div><div class="cbdy">Materials: Shells ×20, Shot ×25<br>Cost: $2,150 • Time: 8m<br>Req: LVL 1 • Location: Grapeseed Shed</div></div>
-        <div class="card"><span class="cico">📦</span><div class="cttl">RIFLE TRACERS (x40)</div><div class="cbdy">Materials: 5.56 ×40 + Tracer Compound ×8<br>Cost: $5,200 • Time: 16m<br>Req: LVL 3 • Location: Davis Ammo Plant</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabpanel" id="tab-armor">
-    <div class="psec">
-      <div class="sttl">🛡️ Armor & Protection</div>
-      <div class="grid">
-        <div class="card"><span class="cico">🦺</span><div class="cttl">LIGHT ARMOR VEST</div><div class="cbdy">Materials: Kevlar Plate ×2, Carrier ×1<br>Cost: $3,800 • Durability: 60%<br>Req: LVL 1 • Location: Suburban Lockup</div></div>
-        <div class="card"><span class="cico">🦺</span><div class="cttl">HEAVY COMBAT VEST</div><div class="cbdy">Materials: Ceramic Plate ×3, Reinforced Carrier ×1<br>Cost: $9,400 • Durability: 85%<br>Req: LVL 2 • Location: Bunker</div></div>
-        <div class="card"><span class="cico">🦺</span><div class="cttl">TACTICAL HELMET</div><div class="cbdy">Materials: Ballistic Shell ×1, NV Goggles ×1<br>Cost: $6,200 • Durability: 70%<br>Req: LVL 2 • Location: Fort Zancudo Surplus</div></div>
-        <div class="card"><span class="cico">🦺</span><div class="cttl">EXPLOSIVE RESIST VEST</div><div class="cbdy">Materials: Blast Padding ×4, Heavy Plates ×2<br>Cost: $14,500 • Durability: 90%<br>Req: LVL 3 • Location: Humane Labs Dock</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabpanel" id="tab-explosives">
-    <div class="psec">
-      <div class="sttl">💣 Explosives & Throwables</div>
-      <div class="grid">
-        <div class="card"><span class="cico">💣</span><div class="cttl">STICKY BOMB (x3)</div><div class="cbdy">Materials: C4 ×1, Detonator Kit ×1, Adhesive ×2<br>Cost: $7,200 • Time: 15m<br>Req: LVL 2 • Location: El Burro Heights</div></div>
-        <div class="card"><span class="cico">💣</span><div class="cttl">GRENADE (x5)</div><div class="cbdy">Materials: Frag Shells ×4, Fuse ×5<br>Cost: $4,100 • Time: 9m<br>Req: LVL 2 • Location: Sandy Shores</div></div>
-        <div class="card"><span class="cico">💣</span><div class="cttl">MOLOTOV COCKTAIL (x4)</div><div class="cbdy">Materials: Bottles ×4, Rag ×4, Fuel Can ×1<br>Cost: $1,600 • Time: 5m<br>Req: LVL 1 • Location: Any Gas Station</div></div>
-        <div class="card"><span class="cico">💣</span><div class="cttl">PROXIMITY MINE (x2)</div><div class="cbdy">Materials: Claymore Kit ×1, Sensor ×2<br>Cost: $11,800 • Time: 24m<br>Req: LVL 3 • Location: Raton Canyon Cache</div></div>
-        <div class="card"><span class="cico">💣</span><div class="cttl">TEAR GAS (x6)</div><div class="cbdy">Materials: CS Canister ×3, Riot Shells ×3<br>Cost: $3,900 • Time: 12m<br>Req: LVL 2 • Location: LSPD Evidence Leak</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabpanel" id="tab-supplies">
-    <div class="psec">
-      <div class="sttl">🎒 Supplies & Consumables</div>
-      <div class="grid">
-        <div class="card"><span class="cico">🩹</span><div class="cttl">FIELD MEDKIT</div><div class="cbdy">Materials: Bandages ×6, Morphine ×2, Splint ×1<br>Cost: $2,450 • Uses: 3<br>Req: LVL 1 • Location: Any Clinic Run</div></div>
-        <div class="card"><span class="cico">🩹</span><div class="cttl">ARMOR REPAIR KIT</div><div class="cbdy">Materials: Patch Kit ×2, Plate Fragments ×3<br>Cost: $1,950 • Restores: +35%<br>Req: LVL 1 • Location: Lockup</div></div>
-        <div class="card"><span class="cico">🩹</span><div class="cttl">STIMSHOT (x3)</div><div class="cbdy">Materials: Adrenaline ×2, Syringe ×3<br>Cost: $3,100 • Effect: Temp HP + Sprint<br>Req: LVL 2 • Location: Humane Labs</div></div>
-        <div class="card"><span class="cico">🩹</span><div class="cttl">NIGHT VISION GOGGLES</div><div class="cbdy">Materials: NV Tubes ×2, Battery Pack ×1<br>Cost: $8,800 • Battery: 45m<br>Req: LVL 2 • Location: Zancudo</div></div>
-        <div class="card"><span class="cico">🩹</span><div class="cttl">THERMAL BINOCS</div><div class="cbdy">Materials: FLIR Module ×1, Housing ×1<br>Cost: $13,400 • Battery: 30m<br>Req: LVL 3 • Location: Observatory</div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabpanel" id="tab-vehicles">
-    <div class="psec">
-      <div class="sttl">🚗 Vehicles & Mods</div>
-      <div class="grid">
-        <div class="card"><span class="cico">🚙</span><div class="cttl">KURUMA ARMORED</div><div class="cbdy">Materials: Kuruma ×1 + Armor Plating Kit ×4<br>Cost: $48,000 • Time: 90m<br>Req: LVL 3 • Location: Los Santos Customs (Night)</div></div>
-        <div class="card"><span class="cico">🚙</span><div class="cttl">INSURGENT PICKUP</div><div class="cbdy">Materials: Technical ×1 + Heavy Chassis Kit ×3<br>Cost: $67,000 • Time: 2h 10m<br>Req: LVL 3 • Location: Sandy Shores Hangar</div></div>
-        <div class="card"><span class="cico">🚙</span><div class="cttl">NIGHTSHARK</div><div class="cbdy">Materials: Mesa ×1 + Bulletproof Kit ×5 + Winch<br>Cost: $82,500 • Time: 2h 40m<br>Req: LVL 4 • Location: Fort Zancudo Black Market</div></div>
-        <div class="card"><span class="cico">🚙</span><div class="cttl">WEAPONIZED TERRORBYTE</div><div class="cbdy">Materials: Mule ×1 + Drone Bay ×1 + Turret Kit<br>Cost: $145,000 • Time: 4h<br>Req: LVL 4 • Location: Underground Facility</div></div>
-        <div class="card"><span class="cico">🚙</span><div class="cttl">SMUGGLER'S BUZZARD</div><div class="cbdy">Materials: Maverick ×1 + Minigun Mount + Flares<br>Cost: $195,000 • Time: 3h 30m<br>Req: LVL 4 • Location: Cayo Airstrip</div></div>
-      </div>
-      <div class="tip" style="margin-top:18px"><span class="tipico">⚠️</span><div class="tiptxt"><strong>Vehicle crafting</strong> requires a dedicated garage bay and a Commander present for high-tier vehicles. All crafted vehicles come with tracker disabled by default.</div></div>
-    </div>
+  <div style="text-align: center; margin-top: 100px; font-size: 28px; color: var(--muted); letter-spacing: 2px;">
+    WORK IN PROGRESS
   </div>
 
 </div><!-- /pc -->
@@ -140,15 +37,6 @@
 <script>
   initDB();
   DM.nav.init();
-
-  // Tab switcher (was missing - caused all crafting tabs to be broken)
-  function sw(tab, btn) {
-    document.querySelectorAll('.ptab').forEach(b => b.classList.remove('on'));
-    btn.classList.add('on');
-    document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('on'));
-    const panel = document.getElementById('tab-' + tab);
-    if (panel) panel.classList.add('on');
-  }
 </script>
 </body>
 </html>

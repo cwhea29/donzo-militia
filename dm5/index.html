@@ -15,15 +15,15 @@
 <div class="corner bl"></div><div class="corner br"></div>
 <div class="login-box">
   <div class="login-hdr">
-    <img class="login-logo" src="images/DM_2.png" alt="Donzo Militia" onerror="this.style.display='none'">
+    <img class="login-logo" src="images/DM_2.png" alt="Donzo" onerror="this.style.display='none'">
     <div>
       <div class="login-org">DONZO</div>
-      <div class="login-sub">GTA V Operations Database</div>
+      <div class="login-sub">Donzo Location Map</div>
     </div>
   </div>
   <div class="login-body">
     <form onsubmit="event.preventDefault(); doLogin()">
-      <div class="fg"><label>// Callsign</label>
+      <div class="fg"><label>// Username</label>
         <input type="text" id="lu" placeholder="Enter username..." autocomplete="off" autocapitalize="none"></div>
       <div class="fg"><label>// Password</label>
         <div style="position:relative">
@@ -35,7 +35,7 @@
     </form>
     <div class="login-err" id="lerr"></div>
   </div>
-  <div class="login-foot"><span>// DONZO v3.0</span><span>SUPABASE EDITION</span></div>
+  <div class="login-foot"><span>// DONZO v3.0</span></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
@@ -52,7 +52,7 @@
     const e=document.getElementById('lerr'),btn=document.getElementById('lbtn');
     e.textContent='';
     const u=document.getElementById('lu').value,p=document.getElementById('lp').value;
-    if(!u||!p){e.textContent='// Enter your callsign and password';return;}
+    if(!u||!p){e.textContent='// Enter your username and password';return;}
     btn.innerHTML='<span class="spin"></span>AUTHENTICATING...';btn.disabled=true;
     try {
       const r = await DM.auth.login(u, p);
