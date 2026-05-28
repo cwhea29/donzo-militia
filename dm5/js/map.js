@@ -61,10 +61,40 @@ DM.map = (() => {
     activeCategories = new Set();
     activeGroups = new Set();
 
+    // Setup automatic error/bug reporting now that DM.db is guaranteed to exist
+    setupGlobalErrorReporting();
+
     loadGroups().then(() => {
       renderCategoryFilters();
       renderGroupFilters();
     });
+  }
+
+  function setupGlobalErrorReporting() {
+    if (window.__donzoErrorReportingSetup) return;
+    window.__donzoErrorReportingSetup = true;
+
+    window.addEventListener('error', function(event) {
+      if (DM && DM.db && DM.db.reportBug) {
+        DM.db.reportBug({
+          message: event.message,
+          stack: event.error ? event.error.stack : null,
+          url: window.location.href
+        });
+      }
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      if (DM && DM.db && DM.db.reportBug) {
+        DM.db.reportBug({
+          message: event.reason ? (event.reason.message || String(event.reason)) : 'Unhandled promise rejection',
+          stack: event.reason && event.reason.stack ? event.reason.stack : null,
+          url: window.location.href
+        });
+      }
+    });
+
+    console.log('%c[Donzo] Automatic bug reporting enabled (in map.js)', 'color:#6a8a5a');
   }
 
   // ── MAP IMG ─────────────────────────────────────────────
@@ -736,12 +766,21 @@ DM.map = (() => {
   }
 
   // ── GROUP FILTERS & MANAGEMENT ───────────────────────────
-  async function loadGroups() {
+  async function loadGroups(attempt = 1) {
     try {
+      if (!DM || !DM.db || typeof DM.db.getGroups !== 'function') {
+        if (attempt < 4) {
+          setTimeout(() => loadGroups(attempt + 1), 800);
+        }
+        return;
+      }
       allGroups = await DM.db.getGroups();
     } catch (e) {
       console.error('Failed to load groups', e);
       allGroups = [];
+      if (attempt < 3) {
+        setTimeout(() => loadGroups(attempt + 1), 1000);
+      }
     }
   }
 
@@ -1349,6 +1388,13 @@ DM.map = (() => {
           <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
         </div>
       `;
+
+      // Auto-retry once after a short delay
+      setTimeout(() => {
+        if (container && container.innerHTML.includes('Database not ready')) {
+          loadBugReports();
+        }
+      }, 1300);
       return;
     }
 

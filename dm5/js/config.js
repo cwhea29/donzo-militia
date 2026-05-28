@@ -80,9 +80,7 @@ function initDB() {
     window.dmStorage = window.dmDB.storage;
     console.log('%c[Supabase] Client created successfully', 'color:#6a8a5a');
 
-    // Set up automatic bug/error reporting (only once)
-    setupErrorReporting();
-
+    // Note: Error reporting is now set up in map.js init() after DM.db is guaranteed to exist.
     return true;
   } catch (e) {
     console.error('%c[Supabase] Init failed:', 'color:#c0392b', e);
@@ -90,31 +88,4 @@ function initDB() {
   }
 }
 
-function setupErrorReporting() {
-  if (window.__donzoErrorReportingSetup) return; // prevent double setup
-  window.__donzoErrorReportingSetup = true;
-
-  // Catch uncaught errors
-  window.addEventListener('error', function(event) {
-    if (window.dmDB && DM && DM.db && DM.db.reportBug) {
-      DM.db.reportBug({
-        message: event.message,
-        stack: event.error ? event.error.stack : null,
-        url: window.location.href
-      });
-    }
-  });
-
-  // Catch unhandled promise rejections
-  window.addEventListener('unhandledrejection', function(event) {
-    if (window.dmDB && DM && DM.db && DM.db.reportBug) {
-      DM.db.reportBug({
-        message: event.reason ? (event.reason.message || String(event.reason)) : 'Unhandled promise rejection',
-        stack: event.reason && event.reason.stack ? event.reason.stack : null,
-        url: window.location.href
-      });
-    }
-  });
-
-  console.log('%c[Donzo] Automatic bug reporting enabled', 'color:#6a8a5a');
-}
+// Error reporting setup moved to map.js for proper initialization order.
