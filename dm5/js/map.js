@@ -336,7 +336,12 @@ DM.map = (() => {
     const name = el('m-name').value.trim();
     if (!name) { toast('Location name is required'); return; }
     if (name.length > 60) { toast('Name too long (max 60 chars)'); return; }
-    if (!pending) return;
+
+    // Only require map coordinates when creating a *new* marker
+    if (!editingMarkerId && !pending) {
+      console.warn('[saveMarker] Blocked: no pending coordinates (not in edit mode)');
+      return;
+    }
 
     // Check image still uploading
     if (el('img-file').files[0] && !pendingImageUrl) {
@@ -345,6 +350,8 @@ DM.map = (() => {
 
     const btn = el('save-btn');
     btn.innerHTML = '<span class="spin"></span>SAVING...'; btn.disabled = true;
+
+    console.log('[saveMarker] Called. editingMarkerId =', editingMarkerId);
 
     try {
       if (editingMarkerId) {

@@ -71,9 +71,14 @@ DM.db = (() => {
   }
 
   async function updateMarker(user, markerId, m) {
+    console.log('[updateMarker] Called for', markerId);
+
     // Reuse delete permission for edit permission (creator or high rank)
     const tempMarker = { id: markerId, created_by: m.created_by };
-    if (!DM.auth.canDelete(tempMarker, user)) throw new Error('No permission to edit this location');
+    if (!DM.auth.canDelete(tempMarker, user)) {
+      console.warn('[updateMarker] Permission denied');
+      throw new Error('No permission to edit this location');
+    }
 
     const { error } = await dmDB.from('markers').update({
       name:             m.name,
