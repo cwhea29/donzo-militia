@@ -1323,15 +1323,75 @@ DM.map = (() => {
     }
   }
 
-  // Placeholder for Bug Reports (Boss only)
+  // ── BUG REPORTS (Boss only) ──────────────────────────────
   async function loadBugReports() {
     const container = el('bug-reports-list');
-    container.innerHTML = `
-      <div style="padding: 20px; text-align: center; color: #e07070;">
-        Bug reporting system not yet implemented.<br>
-        We can add a <code>bug_reports</code> table and logging soon.
-      </div>
-    `;
+    if (!container) return;
+
+    container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Loading bug reports...</div>';
+
+    try {
+      const bugs = await DM.db.getBugReports(200);
+
+      if (bugs.length === 0) {
+        container.innerHTML = '<div style="padding:20px; color:var(--muted); text-align:center;">No bugs reported yet. Great job!</div>';
+        return;
+      }
+
+      let html = `
+        <table style="width:100%; border-collapse: collapse; font-size:12px;">
+          <tr style="background: var(--panel2);">
+            <th style="text-align:left; padding:8px;">Time</th>
+            <th style="text-align:left; padding:8px;">Message</th>
+            <th style="text-align:left; padding:8px;">User</th>
+            <th style="text-align:left; padding:8px;">Level</th>
+            <th style="text-align:left; padding:8px;">URL</th>
+            <th style="width:70px; padding:8px;"></th>
+          </tr>
+      `;
+
+      bugs.forEach(bug => {
+        const time = new Date(bug.created_at).toLocaleString();
+        const shortMessage = bug.message.length > 90 ? bug.message.substring(0, 90) + '...' : bug.message;
+
+        html += `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:6px; font-size:11px; white-space:nowrap;">${time}</td>
+            <td style="padding:6px; max-width:320px;">
+              <div style="line-height:1.3;" title="${bug.message.replace(/"/g, '&quot;')}">${shortMessage}</div>
+              ${bug.stack ? `<details style="margin-top:4px;"><summary style="font-size:10px; color:#ff9999; cursor:pointer;">Stack trace</summary><pre style="font-size:9px; white-space:pre-wrap; color:#ffaaaa; max-height:120px; overflow:auto;">${bug.stack}</pre></details>` : ''}
+            </td>
+            <td style="padding:6px; white-space:nowrap;">${bug.username || '<i>Guest</i>'}</td>
+            <td style="padding:6px; text-align:center;">${bug.user_level ?? '-'}</td>
+            <td style="padding:6px; font-size:10px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <a href="${bug.url}" target="_blank" style="color:var(--tan-lt);">${bug.url ? new URL(bug.url).pathname : ''}</a>
+            </td>
+            <td style="padding:6px; text-align:right;">
+              <button onclick="DM.map.deleteBugReport('${bug.id}', this)" style="font-size:10px; color:#c0392b; background:none; border:1px solid #c0392b; padding:2px 6px; border-radius:3px; cursor:pointer;">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += '</table>';
+      container.innerHTML = html;
+
+    } catch (e) {
+      container.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load bug reports: ${e.message}</div>`;
+    }
+  }
+
+  async function deleteBugReport(id, buttonElement) {
+    if (!confirm('Delete this bug report?')) return;
+
+    try {
+      await DM.db.deleteBugReport(id);
+      toast('Bug report deleted');
+      // Refresh the list
+      await loadBugReports();
+    } catch (e) {
+      toast('Failed to delete report: ' + e.message);
+    }
   }
   function closeUsers() { el('user-modal').classList.add('hidden'); }
 
@@ -1428,6 +1488,6 @@ DM.map = (() => {
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
-    openAuditLogFromNav, openBugsFromNav, syncMarkerGroups, loadGroupSelectionForModal
+    openAuditLogFromNav, openBugsFromNav, deleteBugReport, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();

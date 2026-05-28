@@ -68,6 +68,9 @@ DM.db = (() => {
     if (!DM.auth.canDelete(marker, user)) throw new Error('No permission');
     const { error } = await dmDB.from('markers').delete().eq('id', marker.id);
     if (error) throw new Error(error.message);
+
+    // Log the deletion
+    await logAudit(marker.id, 'delete', user.username, { name: marker.name });
   }
 
   async function updateMarker(user, markerId, m) {
@@ -391,6 +394,10 @@ DM.db = (() => {
     addStepToPlan,
     updateStepOrder,
     removeStepFromPlan,
-    deleteHeistPlan
+    deleteHeistPlan,
+    // Bug Reports
+    reportBug,
+    getBugReports,
+    deleteBugReport
   };
 })();
