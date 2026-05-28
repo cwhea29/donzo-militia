@@ -253,6 +253,10 @@
                 style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; display: none;">
           📜 Audit Log
         </button>
+        <button id="tab-bugs" onclick="DM.map.switchUserModalTab('bugs')" 
+                style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; display: none; color: #e07070;">
+          🐛 Bugs
+        </button>
       </div>
 
       <!-- Users Tab Content -->
@@ -286,6 +290,19 @@
       <div id="audit-tab-content" style="display: none;">
         <div id="audit-log-content" style="max-height: 480px; overflow-y: auto; font-size: 13px;">
           <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Bugs Tab Content (Boss only) -->
+      <div id="bugs-tab-content" style="display: none;">
+        <div style="margin-bottom: 12px; color: #e07070;">
+          <strong>Bug Reports</strong> — Only visible to Boss (Level 11)
+        </div>
+        <div id="bug-reports-list" style="max-height: 420px; overflow-y: auto;">
+          <!-- Populated by JS -->
+        </div>
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
         </div>
       </div>
     </div>

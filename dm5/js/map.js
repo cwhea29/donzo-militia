@@ -1180,41 +1180,89 @@ DM.map = (() => {
   // ── USER MANAGEMENT ──────────────────────────────────────
   async function openUsers() {
     el('user-modal').classList.remove('hidden');
+
+    // Apply visibility immediately in case refresh takes time
+    updateUserModalTabVisibility();
+
     await refreshUsers();
 
-    // Show Audit Log tab only for Chief+ (level 8+)
-    const auditTab = el('tab-audit');
-    if (auditTab) {
-      auditTab.style.display = (user && user.level >= 8) ? 'block' : 'none';
-    }
+    console.log('[User Management] Current user level:', user?.level, 'User object:', user);
+
+    // Re-apply visibility after user data is confirmed
+    updateUserModalTabVisibility();
 
     // Default to Users tab
     switchUserModalTab('users');
   }
 
+  function updateUserModalTabVisibility() {
+    const auditTab = el('tab-audit');
+    const bugsTab = el('tab-bugs');
+
+    const userLevel = user?.level ?? 0;
+
+    // Audit Log: Visible for Chief+ (Level 8 and above)
+    if (auditTab) {
+      const shouldShowAudit = userLevel >= 8;
+      auditTab.style.display = shouldShowAudit ? 'block' : 'none';
+      console.log('[User Management] Audit Log tab visible for level', userLevel, ':', shouldShowAudit);
+    }
+
+    // Bugs tab: ONLY for Boss (Level 11)
+    if (bugsTab) {
+      const shouldShowBugs = userLevel === 11;
+      bugsTab.style.display = shouldShowBugs ? 'block' : 'none';
+      console.log('[User Management] Bugs tab visible for level', userLevel, ':', shouldShowBugs);
+    }
+  }
+
   function switchUserModalTab(tab) {
     const usersContent = el('user-tab-content');
     const auditContent = el('audit-tab-content');
+    const bugsContent = el('bugs-tab-content');
+
     const usersTab = el('tab-users');
     const auditTab = el('tab-audit');
+    const bugsTab = el('tab-bugs');
+
+    // Always re-apply visibility in case something changed
+    updateUserModalTabVisibility();
+
+    // Hide all content
+    usersContent.style.display = 'none';
+    auditContent.style.display = 'none';
+    bugsContent.style.display = 'none';
+
+    // Reset tab styles
+    if (usersTab) usersTab.style.borderBottom = '2px solid transparent';
+    if (auditTab) auditTab.style.borderBottom = '2px solid transparent';
+    if (bugsTab) bugsTab.style.borderBottom = '2px solid transparent';
 
     if (tab === 'users') {
       usersContent.style.display = 'block';
-      auditContent.style.display = 'none';
-      usersTab.style.borderBottom = '2px solid var(--tan)';
-      if (auditTab) auditTab.style.borderBottom = '2px solid transparent';
-    } else if (tab === 'audit') {
-      if (!user || user.level < 8) {
+      if (usersTab) usersTab.style.borderBottom = '2px solid var(--tan)';
+    } 
+    else if (tab === 'audit') {
+      const userLevel = user?.level ?? 0;
+      if (userLevel < 8) {
         toast('Only Chief and higher can view the Audit Log');
+        switchUserModalTab('users');
         return;
       }
-      usersContent.style.display = 'none';
       auditContent.style.display = 'block';
-      usersTab.style.borderBottom = '2px solid transparent';
       if (auditTab) auditTab.style.borderBottom = '2px solid var(--tan)';
-
-      // Load audit log into the tab
       loadAuditLogIntoTab();
+    } 
+    else if (tab === 'bugs') {
+      const userLevel = user?.level ?? 0;
+      if (userLevel !== 11) {
+        toast('Only the Boss can access the Bugs section');
+        switchUserModalTab('users');
+        return;
+      }
+      bugsContent.style.display = 'block';
+      if (bugsTab) bugsTab.style.borderBottom = '2px solid #e07070';
+      loadBugReports();
     }
   }
 
@@ -1256,6 +1304,17 @@ DM.map = (() => {
       content.innerHTML = `<div style="color:#e05050; padding:12px;">Failed to load audit log: ${e.message}</div>`;
     }
   }
+
+  // Placeholder for Bug Reports (Boss only)
+  async function loadBugReports() {
+    const container = el('bug-reports-list');
+    container.innerHTML = `
+      <div style="padding: 20px; text-align: center; color: #e07070;">
+        Bug reporting system not yet implemented.<br>
+        We can add a <code>bug_reports</code> table and logging soon.
+      </div>
+    `;
+  }
   function closeUsers() { el('user-modal').classList.add('hidden'); }
 
   async function refreshUsers() {
@@ -1275,6 +1334,9 @@ DM.map = (() => {
         </div>`;
       }).join('') || '<div style="padding:14px;font-size:13px;color:var(--muted);">No users yet</div>';
     } catch (e) { c.innerHTML = `<div style="padding:14px;color:var(--red);font-size:13px;">${e.message}</div>`; }
+
+    // Re-apply tab visibility in case user level was just changed
+    updateUserModalTabVisibility();
   }
 
   async function addUser() {
@@ -1347,6 +1409,6 @@ DM.map = (() => {
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
-    switchUserModalTab, loadAuditLogIntoTab, syncMarkerGroups, loadGroupSelectionForModal
+    switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();
