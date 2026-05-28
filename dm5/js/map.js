@@ -268,25 +268,106 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
+  // Calculate the actual displayed rectangle of the map image inside the container
+  // (accounts for object-fit: contain)
+  function getDisplayedImageRect() {
+    const container = el('map-area');
+    const img = el('map-img');
+
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) {
+      // Fallback if image not loaded yet
+      const r = container.getBoundingClientRect();
+      return { left: 0, top: 0, width: r.width, height: r.height };
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const containerWidth = containerRect.width;
+    const containerHeight = containerRect.height;
+
+    const imgRatio = img.naturalWidth / img.naturalHeight;
+    const containerRatio = containerWidth / containerHeight;
+
+    let displayedWidth, displayedHeight, offsetX, offsetY;
+
+    if (imgRatio > containerRatio) {
+      // Image is wider than container → letterbox on top and bottom
+      displayedWidth = containerWidth;
+      displayedHeight = containerWidth / imgRatio;
+      offsetX = 0;
+      offsetY = (containerHeight - displayedHeight) / 2;
+    } else {
+      // Image is taller than container → letterbox on sides
+      displayedHeight = containerHeight;
+      displayedWidth = containerHeight * imgRatio;
+      offsetY = 0;
+      offsetX = (containerWidth - displayedWidth) / 2;
+    }
+
+    return {
+      left: offsetX,
+      top: offsetY,
+      width: displayedWidth,
+      height: displayedHeight
+    };
+  }
+
+  // Convert click position (relative to container) into image-relative percentages (0-100)
+  function containerToImagePercent(clientX, clientY) {
+    const container = el('map-area');
+    const rect = getDisplayedImageRect();
+
+    const containerRect = container.getBoundingClientRect();
+
+    const xInImage = clientX - containerRect.left - rect.left;
+    const yInImage = clientY - containerRect.top - rect.top;
+
+    const percentX = (xInImage / rect.width) * 100;
+    const percentY = (yInImage / rect.height) * 100;
+
+    return {
+      x: Math.max(0, Math.min(100, percentX)),
+      y: Math.max(0, Math.min(100, percentY))
+    };
+  }
+
+  // Convert image-relative percentages back to container percentages (for rendering)
+  function imageToContainerPercent(imageX, imageY) {
+    const rect = getDisplayedImageRect();
+
+    const containerX = rect.left + (imageX / 100) * rect.width;
+    const containerY = rect.top + (imageY / 100) * rect.height;
+
+    // Convert to percentage of the full container
+    const container = el('map-area');
+    const containerRect = container.getBoundingClientRect();
+
+    return {
+      x: (containerX / containerRect.width) * 100,
+      y: (containerY / containerRect.height) * 100
+    };
+  }
+
   // ── CLICK / MOVE ─────────────────────────────────────────
   function onMapClick(e) {
     if (!placing || !user.canAdd || moved) {
-      // Helpful debug if it keeps failing
       if (placing && moved) {
         console.log('[Map] Click blocked because moved flag was true');
       }
       return;
     }
-    const r = el('zoom-l').getBoundingClientRect();
-    pending = { x: ((e.clientX-r.left)/r.width)*100, y: ((e.clientY-r.top)/r.height)*100 };
+
+    // Use image-relative coordinates instead of raw container percentages
+    const imagePercent = containerToImagePercent(e.clientX, e.clientY);
+    pending = { x: imagePercent.x, y: imagePercent.y };
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
-    const r = el('zoom-l').getBoundingClientRect();
+
+    const imagePercent = containerToImagePercent(e.clientX, e.clientY);
     el('coords').textContent =
-      `X: ${(((e.clientX-r.left)/r.width)*100).toFixed(1)}%  Y: ${(((e.clientY-r.top)/r.height)*100).toFixed(1)}%`;
+      `X: ${imagePercent.x.toFixed(1)}%  Y: ${imagePercent.y.toFixed(1)}%`;
   }
 
   // ── PLACE MODE ───────────────────────────────────────────
@@ -515,7 +596,10 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      div.style.cssText = `left:${m.x}%;top:${m.y}%;`;
+      
+      // Convert image-relative percentages to current container percentages
+      const containerPercent = imageToContainerPercent(m.x, m.y);
+      div.style.cssText = `left:${containerPercent.x}%;top:${containerPercent.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
       const s   = strks[m.min_access_level] || strks[1];
@@ -1220,17 +1304,26 @@ DM.map = (() => {
   function jumpTo(id) {
     const m = markers.find(x => x.id === id);
     if (!m) return;
+
     const jump = () => {
+      // Convert image-relative coords to current container coords for accurate panning
+      const containerPercent = imageToContainerPercent(m.x, m.y);
       const r = el('map-area').getBoundingClientRect();
-      px = r.width/2  - (m.x/100)*r.width*scale;
-      py = r.height/2 - (m.y/100)*r.height*scale;
+
+      px = r.width/2  - (containerPercent.x / 100) * r.width * scale;
+      py = r.height/2 - (containerPercent.y / 100) * r.height * scale;
+
       applyT();
-      showPopup(m, { clientX: r.left+r.width/2, clientY: r.top+r.height/2, stopPropagation:()=>{} });
+      showPopup(m, { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, stopPropagation: () => {} });
     };
+
     if (m.zone !== curZone) {
       swapZone(m.zone, document.querySelector(`.ztab[data-z="${m.zone}"]`));
       setTimeout(jump, 400);
-    } else jump();
+    } else {
+      jump();
+    }
+
     if (innerWidth < 768) toggleSidebar();
   }
 
@@ -1556,6 +1649,8 @@ DM.map = (() => {
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
-    openAuditLogFromNav, openBugsFromNav, deleteBugReport, syncMarkerGroups, loadGroupSelectionForModal
+    openAuditLogFromNav, openBugsFromNav, deleteBugReport,
+    // Exposed for debugging if needed
+    getDisplayedImageRect, containerToImagePercent, imageToContainerPercent, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();
