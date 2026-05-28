@@ -303,9 +303,6 @@ DM.map = (() => {
     repositioningMarkerId = markerId;
     repositioningCreatedBy = createdBy;
 
-    // Force clean 1:1 view so coordinate math is accurate (prevents "click lands in wrong place" under zoom/pan)
-    resetView();
-
     // Force clean state so the next click is treated as a move target
     placing = false;
     moved = false;
@@ -316,7 +313,7 @@ DM.map = (() => {
     el('sdot').className = 'sdot placing';
     el('smode').textContent = 'MOVING MARKER';
 
-    toast('View reset for accuracy. Click on the map to set the new position (ESC to cancel)');
+    toast('Click on the map to set the new position (stay zoomed for precision — ESC to cancel)');
   }
 
   function cancelRepositioning() {
@@ -329,14 +326,34 @@ DM.map = (() => {
     el('smode').textContent = 'VIEW MODE';
   }
 
-  // Calculate the actual displayed rectangle of the map image inside the container
-  // (accounts for object-fit: contain)
+  // Returns the current on-screen rectangle of the map image.
+  // This uses the live getBoundingClientRect() so it automatically respects
+  // the current zoom + pan transform on #zoom-l + object-fit letterboxing.
+  // This is what makes accurate placement possible while zoomed in.
   function getDisplayedImageRect() {
-    const container = el('map-area');
     const img = el('map-img');
+    const container = el('map-area');
 
-    if (!container || !img || !img.naturalWidth || !img.naturalHeight) {
-      // Fallback if image not loaded yet
+    if (!img || !container) {
+      const r = container ? container.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
+      return { left: 0, top: 0, width: r.width, height: r.height };
+    }
+
+    // Preferred: use the actual rendered rect (includes all transforms + letterboxing)
+    const live = img.getBoundingClientRect();
+    if (live && live.width > 10 && live.height > 10) {
+      // Convert to offsets relative to the container (for compatibility with existing math)
+      const containerRect = container.getBoundingClientRect();
+      return {
+        left: live.left - containerRect.left,
+        top: live.top - containerRect.top,
+        width: live.width,
+        height: live.height
+      };
+    }
+
+    // Fallback (image not loaded or zero size) — manual letterbox calculation
+    if (!img.naturalWidth || !img.naturalHeight) {
       const r = container.getBoundingClientRect();
       return { left: 0, top: 0, width: r.width, height: r.height };
     }
@@ -344,20 +361,17 @@ DM.map = (() => {
     const containerRect = container.getBoundingClientRect();
     const containerWidth = containerRect.width;
     const containerHeight = containerRect.height;
-
     const imgRatio = img.naturalWidth / img.naturalHeight;
     const containerRatio = containerWidth / containerHeight;
 
     let displayedWidth, displayedHeight, offsetX, offsetY;
 
     if (imgRatio > containerRatio) {
-      // Image is wider than container → letterbox on top and bottom
       displayedWidth = containerWidth;
       displayedHeight = containerWidth / imgRatio;
       offsetX = 0;
       offsetY = (containerHeight - displayedHeight) / 2;
     } else {
-      // Image is taller than container → letterbox on sides
       displayedHeight = containerHeight;
       displayedWidth = containerHeight * imgRatio;
       offsetY = 0;
@@ -373,9 +387,10 @@ DM.map = (() => {
   }
 
   // Convert click position (relative to container) into image-relative percentages (0-100)
+  // Now uses the live image rect (from getBoundingClientRect) so it works correctly at any zoom/pan level.
   function containerToImagePercent(clientX, clientY) {
     const container = el('map-area');
-    const rect = getDisplayedImageRect();
+    const rect = getDisplayedImageRect();   // now prefers live transformed rect
 
     const containerRect = container.getBoundingClientRect();
 
@@ -391,14 +406,14 @@ DM.map = (() => {
     };
   }
 
-  // Convert image-relative percentages back to container percentages (for rendering)
+  // Convert image-relative percentages back to container percentages (for rendering markers)
+  // Uses the live on-screen image rect so markers stay in the correct visual spot even when zoomed in.
   function imageToContainerPercent(imageX, imageY) {
-    const rect = getDisplayedImageRect();
+    const rect = getDisplayedImageRect();   // now prefers live transformed rect
 
     const containerX = rect.left + (imageX / 100) * rect.width;
     const containerY = rect.top + (imageY / 100) * rect.height;
 
-    // Convert to percentage of the full container
     const container = el('map-area');
     const containerRect = container.getBoundingClientRect();
 
@@ -474,9 +489,6 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
-      // Reset to 1:1 view — this makes the click-to-image math trustworthy.
-      // Without this, zoomed/panned state makes clicks land in completely different visual spots.
-      resetView();
       moved = false;
       pointerDownX = 0;
       pointerDownY = 0;
@@ -488,7 +500,7 @@ DM.map = (() => {
     el('map-area').style.cursor = placing ? 'crosshair' : 'default';
     el('sdot').className    = 'sdot' + (placing ? ' placing' : '');
     el('smode').textContent = placing ? 'PLACING MARKER' : 'VIEW MODE';
-    toast(placing ? 'VIEW RESET — CLICK EXACTLY WHERE YOU WANT THE MARKER' : 'PLACING MODE OFF');
+    toast(placing ? 'CLICK ON THE MAP (zoom in first for precision)' : 'PLACING MODE OFF');
   }
 
   // ── ADD / EDIT MODAL ─────────────────────────────────────

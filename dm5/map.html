@@ -32,8 +32,8 @@
 </div>
 
 <div class="map-area" id="map-area"
-     onclick="DM.map.onMapClick(event)"
-     onmousemove="DM.map.onMouseMove(event)">
+     onclick="DM.map && DM.map.onMapClick && DM.map.onMapClick(event)"
+     onmousemove="DM.map && DM.map.onMouseMove && DM.map.onMouseMove(event)">
   <div id="pan-c">
     <div id="zoom-l">
       <!--
