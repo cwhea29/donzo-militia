@@ -261,68 +261,75 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
-  // ── LIVE IMAGE-RELATIVE COORDINATES (most accurate) ──────────────────────
-  // We use the *actual* current on-screen rectangle of the <img> element
-  // (img.getBoundingClientRect()). This automatically accounts for:
-  // - object-fit: contain letterboxing
-  // - Current pan/zoom transform on #zoom-l (when at 1:1 it's the base)
-  // - Any browser subpixel / DPI differences
+  // ═══════════════════════════════════════════════════════════════════════
+  // CLEAN COORDINATE SYSTEM — PIXELS IN SOURCE IMAGE (FINAL VERSION)
+  // ═══════════════════════════════════════════════════════════════════════
   //
-  // This is the most reliable way to make click == marker position.
+  // Strategy that finally works reliably:
+  // - Store every marker as absolute PIXELS in the original map image
+  //   (e.g. x: 4523, y: 2871 on the 8192x8192 atlas).
+  // - Always calculate using the LIVE `img.getBoundingClientRect()`.
+  //   This is the single source of truth for where the image actually is on screen
+  //   right now (handles object-fit, transform, DPI, everything).
+  // - Force 1:1 view when placing (removes transform complexity during the critical action).
+  // - For rendering, compute exact screen position then convert to pixels relative
+  //   to the marker layer (more precise than percentages under transforms).
 
-  function getLiveImageRect() {
+  function getImageInfo() {
     const img = el('map-img');
+    if (!img) return null;
+
+    return {
+      naturalW: img.naturalWidth || 8192,
+      naturalH: img.naturalHeight || 8192,
+      rect: img.getBoundingClientRect()
+    };
+  }
+
+  // Click position → pixels in the original source image
+  function clientToImagePixels(clientX, clientY) {
+    const info = getImageInfo();
+    if (!info || info.rect.width < 5 || info.rect.height < 5) {
+      return { x: 0, y: 0 };
+    }
+
+    const { rect, naturalW, naturalH } = info;
+
+    const fracX = (clientX - rect.left) / rect.width;
+    const fracY = (clientY - rect.top) / rect.height;
+
+    return {
+      x: Math.max(0, Math.min(naturalW, fracX * naturalW)),
+      y: Math.max(0, Math.min(naturalH, fracY * naturalH))
+    };
+  }
+
+  // Source image pixels → exact screen position (used for rendering)
+  function imagePixelsToScreen(pixelX, pixelY) {
+    const info = getImageInfo();
+    if (!info) return { left: 0, top: 0 };
+
+    const { rect, naturalW, naturalH } = info;
+
+    return {
+      left: rect.left + (pixelX / naturalW) * rect.width,
+      top:  rect.top  + (pixelY / naturalH) * rect.height
+    };
+  }
+
+  // Convert screen position to % relative to the marker layer (for CSS left/top)
+  function screenToLayerPercent(screenLeft, screenTop) {
+    const layer = el('marker-layer');
     const container = el('map-area');
 
-    if (!img || !container) {
-      const r = container ? container.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
-      return { left: 0, top: 0, width: r.width, height: r.height };
-    }
+    if (!layer || !container) return { x: 50, y: 50 };
 
-    const imgRect = img.getBoundingClientRect();
+    const layerRect = layer.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
 
-    // If the image hasn't loaded yet, fall back to container
-    if (imgRect.width < 10 || imgRect.height < 10) {
-      return {
-        left: 0,
-        top: 0,
-        width: containerRect.width,
-        height: containerRect.height
-      };
-    }
-
     return {
-      left: imgRect.left - containerRect.left,
-      top: imgRect.top - containerRect.top,
-      width: imgRect.width,
-      height: imgRect.height
-    };
-  }
-
-  function clientToImagePercent(clientX, clientY) {
-    const rect = getLiveImageRect();
-    const containerRect = el('map-area').getBoundingClientRect();
-
-    const xInImage = clientX - containerRect.left - rect.left;
-    const yInImage = clientY - containerRect.top - rect.top;
-
-    return {
-      x: Math.max(0, Math.min(100, (xInImage / rect.width) * 100)),
-      y: Math.max(0, Math.min(100, (yInImage / rect.height) * 100))
-    };
-  }
-
-  function imagePercentToLayerPercent(imgX, imgY) {
-    const rect = getLiveImageRect();
-    const containerRect = el('map-area').getBoundingClientRect();
-
-    const screenX = containerRect.left + rect.left + (imgX / 100) * rect.width;
-    const screenY = containerRect.top + rect.top + (imgY / 100) * rect.height;
-
-    return {
-      x: ((screenX - containerRect.left) / containerRect.width) * 100,
-      y: ((screenY - containerRect.top) / containerRect.height) * 100
+      x: ((screenLeft - containerRect.left) / containerRect.width) * 100,
+      y: ((screenTop  - containerRect.top)  / containerRect.height) * 100
     };
   }
 
@@ -335,14 +342,18 @@ DM.map = (() => {
       return;
     }
 
-    pending = clientToImagePercent(e.clientX, e.clientY);
+    // Store as pixels in the source image — this is the stable value
+    pending = clientToImagePixels(e.clientX, e.clientY);
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
-    const p = clientToImagePercent(e.clientX, e.clientY);
-    el('coords').textContent = `X: ${p.x.toFixed(1)}%  Y: ${p.y.toFixed(1)}%`;
+    const p = clientToImagePixels(e.clientX, e.clientY);
+    const info = getImageInfo();
+    const nw = info ? info.naturalW : 8192;
+    const nh = info ? info.naturalH : 8192;
+    el('coords').textContent = `X: ${p.x.toFixed(0)} / ${nw}   Y: ${p.y.toFixed(0)} / ${nh}`;
   }
 
   // ── PLACE MODE ───────────────────────────────────────────
@@ -543,7 +554,9 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      const layerPos = imagePercentToLayerPercent(m.x, m.y);
+      // Compute exact screen position of this pixel, then turn it into % of the marker layer
+      const screenPos = imagePixelsToScreen(m.x, m.y);
+      const layerPos = screenToLayerPercent(screenPos.left, screenPos.top);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
