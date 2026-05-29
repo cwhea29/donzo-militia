@@ -262,110 +262,105 @@ DM.map = (() => {
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // CLEAN COORDINATE SYSTEM — PIXELS IN SOURCE IMAGE (FINAL VERSION)
+  // BRAND NEW PLACEMENT SYSTEM — STARTED FROM SCRATCH
   // ═══════════════════════════════════════════════════════════════════════
   //
-  // Strategy that finally works reliably:
-  // - Store every marker as absolute PIXELS in the original map image
-  //   (e.g. x: 4523, y: 2871 on the 8192x8192 atlas).
-  // - Always calculate using the LIVE `img.getBoundingClientRect()`.
-  //   This is the single source of truth for where the image actually is on screen
-  //   right now (handles object-fit, transform, DPI, everything).
-  // - Force 1:1 view when placing (removes transform complexity during the critical action).
-  // - For rendering, compute exact screen position then convert to pixels relative
-  //   to the marker layer (more precise than percentages under transforms).
+  // This is a complete rewrite of the coordinate logic.
+  //
+  // Core rules:
+  // - We store positions as NORMALIZED 0-1 fractions of the SOURCE IMAGE.
+  // - We ALWAYS force 1:1 view when the user is placing (critical for accuracy).
+  // - We use ONLY the live img.getBoundingClientRect() for calculations.
+  // - Rendering uses the exact same live rect so click position == marker position.
+  //
+  // This is the simplest and most reliable pattern for image + object-fit:contain + transform zoom.
 
-  function getImageInfo() {
+  function getLiveImageRect() {
     const img = el('map-img');
     if (!img) return null;
+    return img.getBoundingClientRect();
+  }
 
+  function getNaturalSize() {
+    const img = el('map-img');
     return {
-      naturalW: img.naturalWidth || 8192,
-      naturalH: img.naturalHeight || 8192,
-      rect: img.getBoundingClientRect()
+      w: img && img.naturalWidth ? img.naturalWidth : 8192,
+      h: img && img.naturalHeight ? img.naturalHeight : 8192
     };
   }
 
-  // Click position → pixels in the original source image
-  function clientToImagePixels(clientX, clientY) {
-    const info = getImageInfo();
-    if (!info || info.rect.width < 5 || info.rect.height < 5) {
-      return { x: 0, y: 0 };
+  // Convert a mouse click into 0-1 position inside the source image
+  function getImageFraction(clientX, clientY) {
+    const rect = getLiveImageRect();
+    if (!rect || rect.width < 10) {
+      return { x: 0.5, y: 0.5 };
     }
-
-    const { rect, naturalW, naturalH } = info;
 
     const fracX = (clientX - rect.left) / rect.width;
     const fracY = (clientY - rect.top) / rect.height;
 
     return {
-      x: Math.max(0, Math.min(naturalW, fracX * naturalW)),
-      y: Math.max(0, Math.min(naturalH, fracY * naturalH))
+      x: Math.max(0, Math.min(1, fracX)),
+      y: Math.max(0, Math.min(1, fracY))
     };
   }
 
-  // Source image pixels → exact screen position (used for rendering)
-  function imagePixelsToScreen(pixelX, pixelY) {
-    const info = getImageInfo();
-    if (!info) return { left: 0, top: 0 };
-
-    const { rect, naturalW, naturalH } = info;
+  // Convert 0-1 image fraction into current screen position
+  function getScreenPosition(fracX, fracY) {
+    const rect = getLiveImageRect();
+    if (!rect) return { left: 0, top: 0 };
 
     return {
-      left: rect.left + (pixelX / naturalW) * rect.width,
-      top:  rect.top  + (pixelY / naturalH) * rect.height
+      left: rect.left + fracX * rect.width,
+      top:  rect.top  + fracY * rect.height
     };
   }
 
-  // Convert screen position to % relative to the marker layer (for CSS left/top)
-  function screenToLayerPercent(screenLeft, screenTop) {
+  // Convert screen position into % relative to the marker layer
+  function screenToLayerPercent(left, top) {
     const layer = el('marker-layer');
-    const container = el('map-area');
+    const area = el('map-area');
 
-    if (!layer || !container) return { x: 50, y: 50 };
+    if (!layer || !area) return { x: 50, y: 50 };
 
-    const layerRect = layer.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
+    const lrect = layer.getBoundingClientRect();
+    const arect = area.getBoundingClientRect();
 
     return {
-      x: ((screenLeft - containerRect.left) / containerRect.width) * 100,
-      y: ((screenTop  - containerRect.top)  / containerRect.height) * 100
+      x: ((left - arect.left) / arect.width) * 100,
+      y: ((top  - arect.top)  / arect.height) * 100
     };
   }
 
-  // ── CLICK / MOVE ─────────────────────────────────────────
+  // ── CLICK HANDLER ─────────────────────────────────────────
   function onMapClick(e) {
     if (!placing || !user.canAdd || moved) {
-      if (placing && moved) {
-        console.log('[Map] Click blocked because moved flag was true');
-      }
+      if (placing && moved) console.log('[Map] Click blocked because moved flag was true');
       return;
     }
 
-    // Store as pixels in the source image — this is the stable value
-    pending = clientToImagePixels(e.clientX, e.clientY);
+    // This is the only place we calculate position now
+    pending = getImageFraction(e.clientX, e.clientY);
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
-    const p = clientToImagePixels(e.clientX, e.clientY);
-    const info = getImageInfo();
-    const nw = info ? info.naturalW : 8192;
-    const nh = info ? info.naturalH : 8192;
-    el('coords').textContent = `X: ${p.x.toFixed(0)} / ${nw}   Y: ${p.y.toFixed(0)} / ${nh}`;
+    const f = getImageFraction(e.clientX, e.clientY);
+    el('coords').textContent = `X: ${(f.x * 100).toFixed(1)}%  Y: ${(f.y * 100).toFixed(1)}%`;
   }
 
   // ── PLACE MODE ───────────────────────────────────────────
   function togglePlace() {
     if (!user.canAdd) {
-      toast('You do not have permission to place markers (requires Lieutenant or higher)');
+      toast('You do not have permission to place markers');
       return;
     }
+
     placing = !placing;
 
     if (placing) {
-      resetView();
+      resetView();        // Force clean 1:1 — this is non-negotiable for accuracy
       moved = false;
     }
 
@@ -373,9 +368,9 @@ DM.map = (() => {
     btn.classList.toggle('on', placing);
     btn.textContent = placing ? '✕ Cancel' : '📍 Place Marker';
     el('map-area').style.cursor = placing ? 'crosshair' : 'default';
-    el('sdot').className    = 'sdot' + (placing ? ' placing' : '');
-    el('smode').textContent = placing ? 'PLACING MARKER' : 'VIEW MODE';
-    toast(placing ? 'VIEW RESET — Click exactly where you want the marker' : 'PLACING MODE OFF');
+    el('sdot').className = 'sdot' + (placing ? ' placing' : '');
+    el('smode').textContent = placing ? 'PLACING MARKER (1:1)' : 'VIEW MODE';
+    toast(placing ? 'VIEW RESET TO 1:1 — Click exactly on the map' : 'PLACING MODE OFF');
   }
 
   // ── ADD / EDIT MODAL ─────────────────────────────────────
@@ -554,8 +549,8 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      // Compute exact screen position of this pixel, then turn it into % of the marker layer
-      const screenPos = imagePixelsToScreen(m.x, m.y);
+      // Use the exact same method as placement
+      const screenPos = getScreenPosition(m.x, m.y);
       const layerPos = screenToLayerPercent(screenPos.left, screenPos.top);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
