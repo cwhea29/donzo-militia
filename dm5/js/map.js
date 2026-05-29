@@ -261,59 +261,69 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
-  // ── IMAGE-RELATIVE COORDINATES (fixes different monitor resolutions) ─────
-  // ── PIXEL-BASED IMAGE COORDINATES (resolution independent) ─────────────────
-  // We now store marker positions as absolute pixels in the source image
-  // (e.g. x: 5234, y: 3187 on an 8192x8192 map). This is completely independent
-  // of browser window size, monitor resolution, aspect ratio, zoom level, or letterboxing.
+  // ── STABLE IMAGE-RELATIVE COORDINATES ───────────────────────────────────
+  // All positions are stored as percentages inside the map image content itself
+  // (0-100, where 50,50 is the center of the actual map artwork).
+  // This makes positions consistent across any monitor resolution or browser size.
+  //
+  // IMPORTANT: Placement always happens at 1:1 view (see togglePlace) to guarantee
+  // the math matches exactly between click and render.
 
-  function getImageNaturalSize() {
+  function getStableImageRect() {
+    const container = el('map-area');
     const img = el('map-img');
-    if (!img || !img.naturalWidth) return { w: 8192, h: 8192 }; // safe fallback for main map
-    return { w: img.naturalWidth, h: img.naturalHeight };
-  }
 
-  function getCurrentImageRect() {
-    const img = el('map-img');
-    if (!img) return null;
-    return img.getBoundingClientRect(); // already includes pan/zoom transform + letterboxing
-  }
-
-  // Convert screen click to pixel position inside the source image
-  function clientToImagePixels(clientX, clientY) {
-    const imgRect = getCurrentImageRect();
-    const natural = getImageNaturalSize();
-
-    if (!imgRect || imgRect.width < 10 || imgRect.height < 10) {
-      // Fallback if image not ready
-      return { x: 0, y: 0 };
+    if (!container || !img || !img.naturalWidth || !img.naturalHeight) {
+      const r = container ? container.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
+      return { left: 0, top: 0, width: r.width, height: r.height };
     }
 
-    const x = ((clientX - imgRect.left) / imgRect.width) * natural.w;
-    const y = ((clientY - imgRect.top) / imgRect.height) * natural.h;
+    const cr = container.getBoundingClientRect();
+    const cw = cr.width;
+    const ch = cr.height;
+    const ir = img.naturalWidth / img.naturalHeight;
+    const cratio = cw / ch;
+
+    let w, h, ox, oy;
+
+    if (ir > cratio) {
+      w = cw;
+      h = cw / ir;
+      ox = 0;
+      oy = (ch - h) / 2;
+    } else {
+      h = ch;
+      w = ch * ir;
+      oy = 0;
+      ox = (cw - w) / 2;
+    }
+
+    return { left: ox, top: oy, width: w, height: h };
+  }
+
+  function clientToImagePercent(clientX, clientY) {
+    const rect = getStableImageRect();
+    const cr = el('map-area').getBoundingClientRect();
+
+    const ix = clientX - cr.left - rect.left;
+    const iy = clientY - cr.top - rect.top;
 
     return {
-      x: Math.max(0, Math.min(natural.w, x)),
-      y: Math.max(0, Math.min(natural.h, y))
+      x: Math.max(0, Math.min(100, (ix / rect.width) * 100)),
+      y: Math.max(0, Math.min(100, (iy / rect.height) * 100))
     };
   }
 
-  // Convert source image pixels back to % inside the marker layer for positioning
-  function imagePixelsToLayerPercent(pixelX, pixelY) {
-    const imgRect = getCurrentImageRect();
-    const natural = getImageNaturalSize();
-    const containerRect = el('map-area').getBoundingClientRect();
+  function imagePercentToLayerPercent(imgX, imgY) {
+    const rect = getStableImageRect();
+    const cr = el('map-area').getBoundingClientRect();
 
-    if (!imgRect || imgRect.width < 10) {
-      return { x: 50, y: 50 };
-    }
-
-    const screenX = imgRect.left + (pixelX / natural.w) * imgRect.width;
-    const screenY = imgRect.top + (pixelY / natural.h) * imgRect.height;
+    const sx = cr.left + rect.left + (imgX / 100) * rect.width;
+    const sy = cr.top + rect.top + (imgY / 100) * rect.height;
 
     return {
-      x: ((screenX - containerRect.left) / containerRect.width) * 100,
-      y: ((screenY - containerRect.top) / containerRect.height) * 100
+      x: ((sx - cr.left) / cr.width) * 100,
+      y: ((sy - cr.top) / cr.height) * 100
     };
   }
 
@@ -326,15 +336,14 @@ DM.map = (() => {
       return;
     }
 
-    pending = clientToImagePixels(e.clientX, e.clientY);
+    pending = clientToImagePercent(e.clientX, e.clientY);
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
-    const p = clientToImagePixels(e.clientX, e.clientY);
-    const natural = getImageNaturalSize();
-    el('coords').textContent = `X: ${p.x.toFixed(0)} / ${natural.w}   Y: ${p.y.toFixed(0)} / ${natural.h}`;
+    const p = clientToImagePercent(e.clientX, e.clientY);
+    el('coords').textContent = `X: ${p.x.toFixed(1)}%  Y: ${p.y.toFixed(1)}%`;
   }
 
   // ── PLACE MODE ───────────────────────────────────────────
@@ -532,7 +541,7 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      const layerPos = imagePixelsToLayerPercent(m.x, m.y);
+      const layerPos = imagePercentToLayerPercent(m.x, m.y);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
