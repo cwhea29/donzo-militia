@@ -7,10 +7,6 @@ DM.map = (() => {
   let toastT, pendingImageUrl = null;
   let editingMarkerId = null;   // NEW: for editing markers from popup
 
-  // Pointer tracking for reliable "click to place" vs drag-to-pan detection (fixes placement after Move Location changes)
-  let pointerDownX = 0, pointerDownY = 0;
-  const PLACE_CLICK_THRESHOLD = 7; // pixels — ignore tiny jitters when trying to place
-
   // Category filters state
   let activeCategories = new Set(); // empty = show all
   let allCategories = Object.keys(CATS);
@@ -147,8 +143,6 @@ DM.map = (() => {
   }
 
   function swapZone(zone, btn) {
-    if (repositioningMarkerId) cancelRepositioning();
-
     curZone = zone;
     document.querySelectorAll('.ztab').forEach(t => t.classList.remove('on'));
     btn.classList.add('on');
@@ -180,11 +174,8 @@ DM.map = (() => {
     }, { passive: false });
 
     wrap.addEventListener('mousedown', e => {
-      pointerDownX = e.clientX;
-      pointerDownY = e.clientY;
-
       if (e.button === 0 && placing) {
-        // In placing mode, prepare for a possible place click
+        // In placing mode, still reset moved so the upcoming click can place
         moved = false;
         return;
       }
@@ -199,18 +190,9 @@ DM.map = (() => {
       moved = true;
       px = e.clientX - lpx; py = e.clientY - lpy; applyT();
     });
-    window.addEventListener('mouseup', (e) => {
+    window.addEventListener('mouseup', () => {
       panning = false;
-
-      // Only mark as "moved a lot" if we actually dragged a meaningful distance
-      if (pointerDownX && pointerDownY) {
-        const dx = e.clientX - pointerDownX;
-        const dy = e.clientY - pointerDownY;
-        moved = (Math.hypot(dx, dy) > PLACE_CLICK_THRESHOLD);
-      } else {
-        moved = false;
-      }
-
+      moved = false;   // ensure we can place after any drag
       const w = el('map-area');
       if (w) w.style.cursor = placing ? 'crosshair' : 'default';
     });
@@ -223,9 +205,6 @@ DM.map = (() => {
     wrap.addEventListener('touchstart', e => {
       activeTouches = e.touches.length;
       if (activeTouches === 1) {
-        pointerDownX = e.touches[0].clientX;
-        pointerDownY = e.touches[0].clientY;
-
         if (placing) return; // allow click-to-place on tap
         panning = true; moved = false;
         touchStartX = e.touches[0].clientX - px;
@@ -269,18 +248,12 @@ DM.map = (() => {
       activeTouches = e.touches.length;
       if (activeTouches === 0) {
         panning = false;
-
-        // Distance check for touch (prevents tiny finger jitter from blocking placement)
-        if (pointerDownX && pointerDownY && e.changedTouches && e.changedTouches.length > 0) {
-          const dx = e.changedTouches[0].clientX - pointerDownX;
-          const dy = e.changedTouches[0].clientY - pointerDownY;
-          moved = (Math.hypot(dx, dy) > PLACE_CLICK_THRESHOLD);
-        } else {
-          moved = false;
-        }
-
         const w = el('map-area');
         if (w) w.style.cursor = placing ? 'crosshair' : 'default';
+        // treat quick tap (no move) as potential marker placement
+        if (placing && !moved && user && user.canAdd) {
+          // synthetic click handled by the onclick on map-area already
+        }
       } else if (activeTouches === 1) {
         // finger lifted, one remains → restart single pan tracking
         touchStartX = e.touches[0].clientX - px;
@@ -295,47 +268,11 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
-  // ── REPOSITIONING MODE (Move existing marker) ─────────────
-  let repositioningMarkerId = null;
-  let repositioningCreatedBy = null;   // captured at start to avoid stale markers[] lookup
-
-  function startRepositioning(markerId, createdBy = null) {
-    repositioningMarkerId = markerId;
-    repositioningCreatedBy = createdBy;
-
-    // Force clean 1:1 view. This guarantees placement math matches the stored x/y values exactly.
-    // Zoomed placement has been unreliable — this makes "Move Location" accurate and trustworthy.
-    resetView();
-
-    // Force clean state so the next click is treated as a move target
-    placing = false;
-    moved = false;
-
-    const area = el('map-area');
-    if (area) area.style.cursor = 'crosshair';
-
-    el('sdot').className = 'sdot placing';
-    el('smode').textContent = 'MOVING MARKER';
-
-    toast('View reset to 1:1 for accurate placement. Click where you want the marker (ESC to cancel)');
-  }
-
-  function cancelRepositioning() {
-    repositioningMarkerId = null;
-    repositioningCreatedBy = null;
-    const area = el('map-area');
-    if (area) area.style.cursor = 'default';
-
-    el('sdot').className = 'sdot';
-    el('smode').textContent = 'VIEW MODE';
-  }
-
-  // Returns the current on-screen rectangle of the map image.
-  // Stable manual letterbox calculation.
-  // Always based on natural image size vs current container size.
-  // Used for rendering markers so that existing saved x/y values (image-relative %)
-  // always appear in the correct visual spot on the map, regardless of current zoom/pan.
-  function getStableImageRect() {
+  // ── IMAGE-RELATIVE COORDINATES (fixes different monitor resolutions) ─────
+  // Calculates the actual visible rectangle of the map image inside the container
+  // (handles object-fit: contain letterboxing). All positions are stored as
+  // percentages inside the *image content itself*, not the browser window.
+  function getDisplayedImageRect() {
     const container = el('map-area');
     const img = el('map-img');
 
@@ -345,134 +282,89 @@ DM.map = (() => {
     }
 
     const containerRect = container.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const containerHeight = containerRect.height;
+    const cw = containerRect.width;
+    const ch = containerRect.height;
 
     const imgRatio = img.naturalWidth / img.naturalHeight;
-    const containerRatio = containerWidth / containerHeight;
+    const containerRatio = cw / ch;
 
-    let displayedWidth, displayedHeight, offsetX, offsetY;
+    let w, h, offsetX, offsetY;
 
     if (imgRatio > containerRatio) {
-      // Image wider than container → letterbox top/bottom
-      displayedWidth = containerWidth;
-      displayedHeight = containerWidth / imgRatio;
+      // Image is wider → letterbox on top and bottom
+      w = cw;
+      h = cw / imgRatio;
       offsetX = 0;
-      offsetY = (containerHeight - displayedHeight) / 2;
+      offsetY = (ch - h) / 2;
     } else {
-      // Image taller → letterbox left/right
-      displayedHeight = containerHeight;
-      displayedWidth = containerHeight * imgRatio;
+      // Image is taller → letterbox on sides
+      h = ch;
+      w = ch * imgRatio;
       offsetY = 0;
-      offsetX = (containerWidth - displayedWidth) / 2;
+      offsetX = (cw - w) / 2;
     }
 
     return {
       left: offsetX,
       top: offsetY,
-      width: displayedWidth,
-      height: displayedHeight
+      width: w,
+      height: h
     };
   }
 
-  // Convert a mouse click into image-relative 0-100 percentages.
-  // We force resetView() when entering Place or Move mode, so this always runs at 1:1.
-  // Using the stable rect guarantees the resulting x/y exactly matches how markers are rendered.
-  function containerToImagePercent(clientX, clientY) {
-    const container = el('map-area');
-    const rect = getStableImageRect();   // stable + forced 1:1 = reliable round-trip
+  // Convert a screen click into image-relative percentages (0-100 inside the map image)
+  function clientToImagePercent(clientX, clientY) {
+    const rect = getDisplayedImageRect();
+    const containerRect = el('map-area').getBoundingClientRect();
 
-    const containerRect = container.getBoundingClientRect();
+    const xInsideImage = clientX - containerRect.left - rect.left;
+    const yInsideImage = clientY - containerRect.top - rect.top;
 
-    const xInImage = clientX - containerRect.left - rect.left;
-    const yInImage = clientY - containerRect.top - rect.top;
-
-    const percentX = (xInImage / rect.width) * 100;
-    const percentY = (yInImage / rect.height) * 100;
+    let px = (xInsideImage / rect.width) * 100;
+    let py = (yInsideImage / rect.height) * 100;
 
     return {
-      x: Math.max(0, Math.min(100, percentX)),
-      y: Math.max(0, Math.min(100, percentY))
+      x: Math.max(0, Math.min(100, px)),
+      y: Math.max(0, Math.min(100, py))
     };
   }
 
-  // Convert stored image-relative percentages back into container % for positioning markers.
-  // Uses the STABLE (non-live) rect so that all your existing markers render in the correct
-  // visual locations on the map, matching the data you saved.
-  function imageToContainerPercent(imageX, imageY) {
-    const rect = getStableImageRect();         // stable for consistent output
+  // Convert image-relative % back to % inside the marker layer (for rendering)
+  function imageToLayerPercent(imageX, imageY) {
+    const rect = getDisplayedImageRect();
+    const containerRect = el('map-area').getBoundingClientRect();
 
-    const containerX = rect.left + (imageX / 100) * rect.width;
-    const containerY = rect.top + (imageY / 100) * rect.height;
-
-    const container = el('map-area');
-    const containerRect = container.getBoundingClientRect();
+    const screenX = containerRect.left + rect.left + (imageX / 100) * rect.width;
+    const screenY = containerRect.top + rect.top + (imageY / 100) * rect.height;
 
     return {
-      x: (containerX / containerRect.width) * 100,
-      y: (containerY / containerRect.height) * 100
+      x: ((screenX - containerRect.left) / containerRect.width) * 100,
+      y: ((screenY - containerRect.top) / containerRect.height) * 100
     };
   }
 
   // ── CLICK / MOVE ─────────────────────────────────────────
   function onMapClick(e) {
-    // Handle repositioning mode first (moving existing marker)
-    if (repositioningMarkerId) {
-      const imagePercent = containerToImagePercent(e.clientX, e.clientY);
-
-      // Use captured created_by (from when "Move Location" was clicked) with safe fallback
-      const createdBy = repositioningCreatedBy ||
-                        (markers.find(m => m.id === repositioningMarkerId) || {}).created_by || null;
-
-      // Permission check (use whatever we have)
-      const tempMarker = { id: repositioningMarkerId, created_by: createdBy };
-      if (createdBy && !DM.auth.canDelete(tempMarker, user)) {
-        toast('You do not have permission to move this marker');
-        cancelRepositioning();
-        return;
-      }
-
-      DM.db.updateMarkerPosition(user, repositioningMarkerId, imagePercent.x, imagePercent.y, createdBy)
-        .then(() => {
-          toast('Location moved');
-          cancelRepositioning();
-          renderMarkers();
-        })
-        .catch(err => {
-          toast('Failed to move marker: ' + err.message);
-          cancelRepositioning();
-        });
-
-      return;
-    }
-
     if (!placing || !user.canAdd || moved) {
       if (placing && moved) {
-        console.log('[Map] Click blocked because moved flag was true (distance exceeded threshold)');
+        console.log('[Map] Click blocked because moved flag was true');
       }
       return;
     }
 
-    // Normal placement
-    const imagePercent = containerToImagePercent(e.clientX, e.clientY);
-    pending = { x: imagePercent.x, y: imagePercent.y };
+    // Store as image-relative percentages (consistent across all monitor resolutions)
+    pending = clientToImagePercent(e.clientX, e.clientY);
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
-
-    const imagePercent = containerToImagePercent(e.clientX, e.clientY);
-    el('coords').textContent =
-      `X: ${imagePercent.x.toFixed(1)}%  Y: ${imagePercent.y.toFixed(1)}%`;
+    const p = clientToImagePercent(e.clientX, e.clientY);
+    el('coords').textContent = `X: ${p.x.toFixed(1)}%  Y: ${p.y.toFixed(1)}%`;
   }
 
   // ── PLACE MODE ───────────────────────────────────────────
   function togglePlace() {
-    if (repositioningMarkerId) {
-      cancelRepositioning();
-    }
-
     if (!user.canAdd) {
       toast('You do not have permission to place markers (requires Lieutenant or higher)');
       return;
@@ -480,12 +372,9 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
-      // Force clean 1:1 view so the click math exactly matches the stored image-relative x/y.
-      // This is currently the only reliable way to get precise placement.
+      // Force clean 1:1 view for the most accurate image-relative placement.
       resetView();
       moved = false;
-      pointerDownX = 0;
-      pointerDownY = 0;
     }
 
     const btn = el('place-btn');
@@ -521,22 +410,6 @@ DM.map = (() => {
 
       el('save-btn').textContent = 'UPDATE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
-
-      // Add "Move Location" button (only once)
-      const modalFoot = el('add-modal').querySelector('.modal-foot');
-      if (modalFoot && !modalFoot.querySelector('.move-location-btn')) {
-        const moveBtn = document.createElement('button');
-        moveBtn.className = 'btn btn-ghost btn-sm move-location-btn';
-        moveBtn.textContent = 'Move Location';
-        moveBtn.onclick = () => {
-          const currentId = editingMarkerId;
-          // Capture created_by from the marker we are currently editing (more reliable than later lookup)
-          const markerData = markers.find(m => m.id === currentId);
-          closeAddModal();
-          startRepositioning(currentId, markerData ? markerData.created_by : null);
-        };
-        modalFoot.appendChild(moveBtn);
-      }
     } else {
       // Creating new
       el('m-name').value = '';
@@ -561,12 +434,6 @@ DM.map = (() => {
     pending = null;
     pendingImageUrl = null;
     editingMarkerId = null;
-
-    // Remove any dynamically added Move button
-    const modalFoot = el('add-modal').querySelector('.modal-foot');
-    const moveBtn = modalFoot?.querySelector('.move-location-btn');
-    if (moveBtn) moveBtn.remove();
-
     el('save-btn').textContent = 'SAVE LOCATION';
     el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
   }
@@ -724,10 +591,10 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      
-      // Convert image-relative percentages to current container percentages
-      const containerPercent = imageToContainerPercent(m.x, m.y);
-      div.style.cssText = `left:${containerPercent.x}%;top:${containerPercent.y}%;`;
+      // Convert from image-relative % to layer % (this keeps positions correct
+      // no matter what the browser window size or monitor resolution is)
+      const layerPos = imageToLayerPercent(m.x, m.y);
+      div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
       const s   = strks[m.min_access_level] || strks[1];
@@ -1432,26 +1299,17 @@ DM.map = (() => {
   function jumpTo(id) {
     const m = markers.find(x => x.id === id);
     if (!m) return;
-
     const jump = () => {
-      // Convert image-relative coords to current container coords for accurate panning
-      const containerPercent = imageToContainerPercent(m.x, m.y);
       const r = el('map-area').getBoundingClientRect();
-
-      px = r.width/2  - (containerPercent.x / 100) * r.width * scale;
-      py = r.height/2 - (containerPercent.y / 100) * r.height * scale;
-
+      px = r.width/2  - (m.x/100)*r.width*scale;
+      py = r.height/2 - (m.y/100)*r.height*scale;
       applyT();
-      showPopup(m, { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, stopPropagation: () => {} });
+      showPopup(m, { clientX: r.left+r.width/2, clientY: r.top+r.height/2, stopPropagation:()=>{} });
     };
-
     if (m.zone !== curZone) {
       swapZone(m.zone, document.querySelector(`.ztab[data-z="${m.zone}"]`));
       setTimeout(jump, 400);
-    } else {
-      jump();
-    }
-
+    } else jump();
     if (innerWidth < 768) toggleSidebar();
   }
 
@@ -1539,26 +1397,17 @@ DM.map = (() => {
     }
   }
 
-  async function loadAuditLogIntoTab(attempt = 1) {
+  async function loadAuditLogIntoTab() {
     const content = el('audit-tab-content');
     content.innerHTML = '<div style="padding:20px; text-align:center;">Loading audit log...</div>';
 
     if (!window.DM || !DM.db || typeof DM.db.getAuditLog !== 'function') {
-      if (attempt <= 5) {
-        content.innerHTML = `
-          <div style="padding: 20px; text-align: center; color: #e07070;">
-            Database not ready yet. Please wait... (attempt ${attempt}/5)
-          </div>
-        `;
-        setTimeout(() => loadAuditLogIntoTab(attempt + 1), 900);
-      } else {
-        content.innerHTML = `
-          <div style="padding: 20px; text-align: center; color: #e07070;">
-            Database not ready yet.<br>
-            Please close and reopen User Management, or hard refresh (Ctrl+Shift+R).
-          </div>
-        `;
-      }
+      content.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #e07070;">
+          Database not ready yet.<br>
+          Please close and reopen User Management.
+        </div>
+      `;
       return;
     }
 
@@ -1598,19 +1447,19 @@ DM.map = (() => {
   }
 
   // ── BUG REPORTS (Visible to everyone) ────────────────────
-  async function loadBugReports(attempt = 1) {
+  async function loadBugReports() {
     const container = el('bug-reports-list');
     if (!container) return;
 
     // Safety check
     if (!window.DM || !DM.db || typeof DM.db.getBugReports !== 'function') {
-      if (attempt <= 6) {
+      if (attempt <= 5) {
         container.innerHTML = `
           <div style="padding: 20px; text-align: center; color: #e07070;">
-            Database not ready yet. Please wait a moment... (attempt ${attempt}/6)
+            Database is still initializing... (attempt ${attempt}/5)
           </div>
         `;
-        setTimeout(() => loadBugReports(attempt + 1), 900);
+        setTimeout(() => loadBugReports(attempt + 1), 1100);
       } else {
         container.innerHTML = `
           <div style="padding: 20px; text-align: center; color: #e07070;">
@@ -1618,10 +1467,11 @@ DM.map = (() => {
             Please hard refresh the page (Ctrl + Shift + R).
           </div>
           <div style="text-align: center; margin-top: 12px;">
-            <button onclick="if (DM && DM.map) DM.map.loadBugReports(1)" class="btn btn-ghost btn-sm">Try Again</button>
+            <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Try Again</button>
           </div>
         `;
       }
+      return;
       return;
     }
 
@@ -1761,12 +1611,7 @@ DM.map = (() => {
       const addM = el('add-modal');
       const userM = el('user-modal');
       const pop = el('popup');
-
-      if (repositioningMarkerId) {
-        cancelRepositioning();
-        toast('Move cancelled');
-      } 
-      else if (!addM.classList.contains('hidden')) closeAddModal();
+      if (!addM.classList.contains('hidden')) closeAddModal();
       else if (!userM.classList.contains('hidden')) closeUsers();
       else if (!pop.classList.contains('hidden')) closePopup();
       else if (placing) togglePlace();
@@ -1790,9 +1635,6 @@ DM.map = (() => {
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
     openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
-    openAuditLogFromNav, openBugsFromNav, deleteBugReport,
-    // Exposed for debugging if needed
-    getDisplayedImageRect: getStableImageRect, containerToImagePercent, imageToContainerPercent,
-    startRepositioning, cancelRepositioning, syncMarkerGroups, loadGroupSelectionForModal
+    openAuditLogFromNav, openBugsFromNav, deleteBugReport, syncMarkerGroups, loadGroupSelectionForModal
   };
 })();
