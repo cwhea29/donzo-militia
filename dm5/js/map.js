@@ -175,7 +175,6 @@ DM.map = (() => {
 
     wrap.addEventListener('mousedown', e => {
       if (e.button === 0 && placing) {
-        // In placing mode, still reset moved so the upcoming click can place
         moved = false;
         return;
       }
@@ -192,7 +191,7 @@ DM.map = (() => {
     });
     window.addEventListener('mouseup', () => {
       panning = false;
-      moved = false;   // ensure we can place after any drag
+      moved = false;
       const w = el('map-area');
       if (w) w.style.cursor = placing ? 'crosshair' : 'default';
     });
@@ -205,7 +204,7 @@ DM.map = (() => {
     wrap.addEventListener('touchstart', e => {
       activeTouches = e.touches.length;
       if (activeTouches === 1) {
-        if (placing) return; // allow click-to-place on tap
+        if (placing) return;
         panning = true; moved = false;
         touchStartX = e.touches[0].clientX - px;
         touchStartY = e.touches[0].clientY - py;
@@ -233,7 +232,6 @@ DM.map = (() => {
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx*dx + dy*dy) || 1;
         const newScale = Math.max(0.4, Math.min(12, initialScale * (dist / initialDist)));
-        // zoom around midpoint
         const r = wrap.getBoundingClientRect();
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
@@ -250,12 +248,7 @@ DM.map = (() => {
         panning = false;
         const w = el('map-area');
         if (w) w.style.cursor = placing ? 'crosshair' : 'default';
-        // treat quick tap (no move) as potential marker placement
-        if (placing && !moved && user && user.canAdd) {
-          // synthetic click handled by the onclick on map-area already
-        }
       } else if (activeTouches === 1) {
-        // finger lifted, one remains → restart single pan tracking
         touchStartX = e.touches[0].clientX - px;
         touchStartY = e.touches[0].clientY - py;
       }
@@ -269,46 +262,31 @@ DM.map = (() => {
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
   // ── IMAGE-RELATIVE COORDINATES (fixes different monitor resolutions) ─────
-  // Calculates the actual visible rectangle of the map image inside the container
-  // (handles object-fit: contain letterboxing). All positions are stored as
-  // percentages inside the *image content itself*, not the browser window.
+  // Uses the *actual* displayed rectangle of the <img> element (after object-fit: contain).
+  // This is more accurate than manual ratio math and eliminates placement offset bugs.
+  // All marker positions are stored as percentages inside the image content itself.
   function getDisplayedImageRect() {
     const container = el('map-area');
     const img = el('map-img');
 
-    if (!container || !img || !img.naturalWidth || !img.naturalHeight) {
+    if (!container || !img) {
       const r = container ? container.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
       return { left: 0, top: 0, width: r.width, height: r.height };
     }
 
-    const containerRect = container.getBoundingClientRect();
-    const cw = containerRect.width;
-    const ch = containerRect.height;
-
-    const imgRatio = img.naturalWidth / img.naturalHeight;
-    const containerRatio = cw / ch;
-
-    let w, h, offsetX, offsetY;
-
-    if (imgRatio > containerRatio) {
-      // Image is wider → letterbox on top and bottom
-      w = cw;
-      h = cw / imgRatio;
-      offsetX = 0;
-      offsetY = (ch - h) / 2;
-    } else {
-      // Image is taller → letterbox on sides
-      h = ch;
-      w = ch * imgRatio;
-      offsetY = 0;
-      offsetX = (cw - w) / 2;
+    if (!img.naturalWidth || !img.naturalHeight || img.naturalWidth === 0) {
+      const r = container.getBoundingClientRect();
+      return { left: 0, top: 0, width: r.width, height: r.height };
     }
 
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+
     return {
-      left: offsetX,
-      top: offsetY,
-      width: w,
-      height: h
+      left: imgRect.left - containerRect.left,
+      top: imgRect.top - containerRect.top,
+      width: imgRect.width,
+      height: imgRect.height
     };
   }
 
@@ -352,7 +330,6 @@ DM.map = (() => {
       return;
     }
 
-    // Store as image-relative percentages (consistent across all monitor resolutions)
     pending = clientToImagePercent(e.clientX, e.clientY);
     openAddModal();
   }
@@ -372,7 +349,6 @@ DM.map = (() => {
     placing = !placing;
 
     if (placing) {
-      // Force clean 1:1 view for the most accurate image-relative placement.
       resetView();
       moved = false;
     }
@@ -391,14 +367,12 @@ DM.map = (() => {
     editingMarkerId = markerToEdit ? markerToEdit.id : null;
 
     if (markerToEdit) {
-      // Editing existing marker
       el('m-name').value = markerToEdit.name || '';
       el('m-desc').value = markerToEdit.description || '';
       el('m-cat').value  = markerToEdit.category || 'poi';
       el('m-vis').value  = markerToEdit.min_access_level || '1';
       pendingImageUrl    = markerToEdit.image_url || null;
 
-      // Show existing image if any
       const preview = el('img-preview');
       if (markerToEdit.image_url) {
         preview.innerHTML = `<img src="${markerToEdit.image_url}" alt="current">`;
@@ -411,7 +385,6 @@ DM.map = (() => {
       el('save-btn').textContent = 'UPDATE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
     } else {
-      // Creating new
       el('m-name').value = '';
       el('m-desc').value = '';
       el('m-cat').value  = 'poi';
@@ -422,7 +395,6 @@ DM.map = (() => {
       el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
     }
 
-    // Load current groups for this marker (if editing)
     loadGroupSelectionForModal(markerToEdit ? markerToEdit.id : null);
 
     el('add-modal').classList.remove('hidden');
@@ -445,16 +417,13 @@ DM.map = (() => {
     el('img-remove').classList.add('hidden');
   }
 
-  // Called when user picks a file
   async function onImagePicked(input) {
     const file = input.files[0];
     if (!file) return;
 
-    // Validate
     if (!file.type.startsWith('image/')) { toast('Please select an image file'); return; }
     if (file.size > 8 * 1024 * 1024)     { toast('Image must be under 8MB'); return; }
 
-    // Show local preview immediately
     const reader = new FileReader();
     reader.onload = ev => {
       el('img-preview').innerHTML = `<img src="${ev.target.result}" alt="preview">`;
@@ -463,7 +432,6 @@ DM.map = (() => {
     };
     reader.readAsDataURL(file);
 
-    // Upload to Supabase Storage in background
     el('img-upload-status').textContent = '// Uploading...';
     try {
       pendingImageUrl = await DM.db.uploadImage(file);
@@ -487,13 +455,11 @@ DM.map = (() => {
     if (!name) { toast('Location name is required'); return; }
     if (name.length > 60) { toast('Name too long (max 60 chars)'); return; }
 
-    // Only require map coordinates when creating a *new* marker
     if (!editingMarkerId && !pending) {
       console.warn('[saveMarker] Blocked: no pending coordinates (not in edit mode)');
       return;
     }
 
-    // Check image still uploading
     if (el('img-file').files[0] && !pendingImageUrl) {
       toast('Wait for image upload to finish'); return;
     }
@@ -501,13 +467,10 @@ DM.map = (() => {
     const btn = el('save-btn');
     btn.innerHTML = '<span class="spin"></span>SAVING...'; btn.disabled = true;
 
-    console.log('[saveMarker] Called. editingMarkerId =', editingMarkerId);
-
     try {
       let savedMarkerId = editingMarkerId;
 
       if (editingMarkerId) {
-        // Editing existing marker
         await DM.db.updateMarker(user, editingMarkerId, {
           name,
           description: el('m-desc').value.trim(),
@@ -518,7 +481,6 @@ DM.map = (() => {
         });
         toast('✓ LOCATION UPDATED');
       } else {
-        // Creating new
         const newMarker = await DM.db.addMarker(user, {
           name,
           zone:        curZone,
@@ -532,7 +494,6 @@ DM.map = (() => {
         toast('✓ LOCATION SAVED — ' + name.toUpperCase());
       }
 
-      // Sync group assignments
       if (savedMarkerId) {
         await syncMarkerGroups(savedMarkerId);
       }
@@ -551,33 +512,16 @@ DM.map = (() => {
     const layer = el('marker-layer');
     layer.innerHTML = '';
     
-    // High contrast colors for better visibility on satellite / dark maps
     const fills = {
-      1:  '#f4e9d8',   // Light beige
-      2:  '#d4e6c3',
-      3:  '#a8d5a2',
-      4:  '#7fc97f',
-      5:  '#ffeb3b',   // Bright yellow
-      6:  '#ffc107',
-      7:  '#ff9800',
-      8:  '#ff5722',
-      9:  '#f44336',
-      10: '#e91e63',
-      11: '#9c27b0'    // Purple for highest (Boss)
+      1:  '#f4e9d8', 2:  '#d4e6c3', 3:  '#a8d5a2', 4:  '#7fc97f',
+      5:  '#ffeb3b', 6:  '#ffc107', 7:  '#ff9800', 8:  '#ff5722',
+      9:  '#f44336', 10: '#e91e63', 11: '#9c27b0'
     };
     
     const strks = {
-      1:  '#8d7b5a',
-      2:  '#5a8a4a',
-      3:  '#4a7a3a',
-      4:  '#3a6a2a',
-      5:  '#c7a000',
-      6:  '#c77a00',
-      7:  '#c75a00',
-      8:  '#c72a00',
-      9:  '#a80000',
-      10: '#8a0040',
-      11: '#4a0050'
+      1:  '#8d7b5a', 2:  '#5a8a4a', 3:  '#4a7a3a', 4:  '#3a6a2a',
+      5:  '#c7a000', 6:  '#c77a00', 7:  '#c75a00', 8:  '#c72a00',
+      9:  '#a80000', 10: '#8a0040', 11: '#4a0050'
     };
 
     markers
@@ -591,8 +535,6 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      // Convert from image-relative % to layer % (this keeps positions correct
-      // no matter what the browser window size or monitor resolution is)
       const layerPos = imageToLayerPercent(m.x, m.y);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
@@ -601,9 +543,7 @@ DM.map = (() => {
 
       div.innerHTML = `<div class="mpin">
         <svg viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
-          <!-- White halo for better visibility on dark/satellite maps -->
           <path d="M15 1C7.3 1 1 7.3 1 15c0 11 14 24 14 24S29 26 29 15C29 7.3 22.7 1 15 1z" fill="white"/>
-          <!-- Colored pin -->
           <path d="M15 2.5C8.1 2.5 2.5 8.1 2.5 15c0 10.2 12.5 22 12.5 22s12.5-11.8 12.5-22c0-6.9-5.6-12.5-12.5-12.5z" fill="${f}" stroke="${s}" stroke-width="1.8"/>
           <text x="15" y="18" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="Arial" font-weight="bold">${ico}</text>
         </svg>
@@ -633,7 +573,6 @@ DM.map = (() => {
     el('pp-cat').textContent  = cat.label;
     el('pp-meta').textContent = `Added by ${m.created_by||'—'} (${lvl.name||'Unknown'})`;
 
-    // Last Updated timestamp
     const updatedEl = el('pp-updated');
     if (m.updated_at) {
       const date = new Date(m.updated_at);
@@ -642,7 +581,6 @@ DM.map = (() => {
       updatedEl.textContent = '';
     }
 
-    // Image — now a URL from Supabase Storage
     const iw = el('pp-img');
     iw.innerHTML = m.image_url
       ? `<img class="popup-img" src="${m.image_url}" alt="${m.name}" onerror="this.parentElement.innerHTML='<div class=popup-noimg>// IMAGE NOT FOUND</div>'">`
@@ -663,7 +601,6 @@ DM.map = (() => {
 
     popup.classList.remove('hidden');
 
-    // Load comments (only if user is logged in)
     if (user) {
       loadCommentsForPopup(m.id);
     } else {
@@ -734,7 +671,6 @@ DM.map = (() => {
     }
   }
 
-  // Edit comment inline
   function editComment(commentId, currentText) {
     const span = el(`comment-text-${commentId}`);
     if (!span) return;
@@ -816,9 +752,7 @@ DM.map = (() => {
           activeCategories = new Set([cat]);
         } else if (activeCategories.has(cat)) {
           activeCategories.delete(cat);
-          if (activeCategories.size === 0) {
-            activeCategories = new Set();
-          }
+          if (activeCategories.size === 0) activeCategories = new Set();
         } else {
           activeCategories.add(cat);
         }
@@ -848,18 +782,14 @@ DM.map = (() => {
   async function loadGroups(attempt = 1) {
     try {
       if (!DM || !DM.db || typeof DM.db.getGroups !== 'function') {
-        if (attempt < 4) {
-          setTimeout(() => loadGroups(attempt + 1), 800);
-        }
+        if (attempt < 4) setTimeout(() => loadGroups(attempt + 1), 800);
         return;
       }
       allGroups = await DM.db.getGroups();
     } catch (e) {
       console.error('Failed to load groups', e);
       allGroups = [];
-      if (attempt < 3) {
-        setTimeout(() => loadGroups(attempt + 1), 1000);
-      }
+      if (attempt < 3) setTimeout(() => loadGroups(attempt + 1), 1000);
     }
   }
 
@@ -953,7 +883,6 @@ DM.map = (() => {
       await loadGroups();
     }
 
-    // If editing, pre-load current groups for this marker
     if (markerId) {
       try {
         const currentGroups = await DM.db.getMarkerGroups(markerId);
@@ -973,11 +902,8 @@ DM.map = (() => {
       checkbox.type = 'checkbox';
       checkbox.checked = isChecked;
       checkbox.onchange = () => {
-        if (checkbox.checked) {
-          modalSelectedGroups.add(group.name);
-        } else {
-          modalSelectedGroups.delete(group.name);
-        }
+        if (checkbox.checked) modalSelectedGroups.add(group.name);
+        else modalSelectedGroups.delete(group.name);
       };
 
       wrapper.appendChild(checkbox);
@@ -989,33 +915,22 @@ DM.map = (() => {
 
   async function syncMarkerGroups(markerId) {
     try {
-      // Get current groups from DB
       const currentGroupObjects = await DM.db.getMarkerGroups(markerId);
       const currentNames = currentGroupObjects.map(g => g.name);
 
-      // Find groups to remove
       const toRemove = currentNames.filter(name => !modalSelectedGroups.has(name));
-
-      // Find groups to add
       const toAdd = [...modalSelectedGroups].filter(name => !currentNames.includes(name));
 
-      // Remove old ones
       for (const name of toRemove) {
         const group = allGroups.find(g => g.name === name);
-        if (group) {
-          await DM.db.removeMarkerFromGroup(markerId, group.id);
-        }
+        if (group) await DM.db.removeMarkerFromGroup(markerId, group.id);
       }
 
-      // Add new ones
       for (const name of toAdd) {
         const group = allGroups.find(g => g.name === name);
-        if (group) {
-          await DM.db.addMarkerToGroup(markerId, group.id);
-        }
+        if (group) await DM.db.addMarkerToGroup(markerId, group.id);
       }
 
-      // Refresh local cache
       await refreshMarkerGroups();
     } catch (e) {
       console.error('Failed to sync groups for marker', e);
@@ -1169,7 +1084,6 @@ DM.map = (() => {
       return;
     }
 
-    // Simple picker using the current markers
     const container = el('heist-plans-list');
     container.innerHTML = `
       <div style="margin-bottom:12px;">
@@ -1217,25 +1131,19 @@ DM.map = (() => {
     }
   }
 
-  // Old separate Audit Log functions removed — now handled as a tab inside User Management
   function closeAuditLog() {
-    // Kept for backwards compatibility if any old calls exist
     const modal = el('audit-log-modal');
     if (modal) modal.classList.add('hidden');
   }
 
-  // Functions called from the top navigation for high-rank users
   function openAuditLogFromNav() {
-    // Open User Management and switch to Audit Log tab
     openUsers();
-    // Small delay to ensure the modal and tabs are ready
     setTimeout(() => {
       switchUserModalTab('audit');
     }, 150);
   }
 
   function openBugsFromNav() {
-    // Open User Management and switch to Bugs tab
     openUsers();
     setTimeout(() => {
       switchUserModalTab('bugs');
@@ -1277,7 +1185,7 @@ DM.map = (() => {
         return matchesSearch && matchesCategory;
       });
       if (!f.length) return '';
-      renderMarkers(); // keep map in sync with sidebar filters/search
+      renderMarkers();
       return `<div class="sb-sec">${title} <span>(${f.length})</span></div>` +
         f.map(m => {
           const v = VIS[m.min_access_level] || VIS[1];
@@ -1316,39 +1224,25 @@ DM.map = (() => {
   // ── USER MANAGEMENT ──────────────────────────────────────
   async function openUsers() {
     el('user-modal').classList.remove('hidden');
-
-    // Apply visibility immediately in case refresh takes time
     updateUserModalTabVisibility();
-
     await refreshUsers();
-
-    console.log('[User Management] Current user level:', user?.level, 'User object:', user);
-
-    // Re-apply visibility after user data is confirmed
     updateUserModalTabVisibility();
-
-    // Default to Users tab
     switchUserModalTab('users');
   }
 
   function updateUserModalTabVisibility() {
     const auditTab = el('tab-audit');
     const bugsTab = el('tab-bugs');
-
     const userLevel = user?.level ?? 0;
 
-    // Audit Log: ONLY for Boss (Level 11)
     if (auditTab) {
       const shouldShowAudit = userLevel === 11;
       auditTab.style.display = shouldShowAudit ? 'block' : 'none';
-      console.log('[User Management] Audit Log tab visible for level', userLevel, ':', shouldShowAudit);
     }
 
-    // Bugs tab: Visible to everyone (all logged-in users)
     if (bugsTab) {
-      const shouldShowBugs = !!user; // any logged-in user
+      const shouldShowBugs = !!user;
       bugsTab.style.display = shouldShowBugs ? 'block' : 'none';
-      console.log('[User Management] Bugs tab visible for level', userLevel, ':', shouldShowBugs);
     }
   }
 
@@ -1361,15 +1255,12 @@ DM.map = (() => {
     const auditTab = el('tab-audit');
     const bugsTab = el('tab-bugs');
 
-    // Always re-apply visibility in case something changed
     updateUserModalTabVisibility();
 
-    // Hide all content
     usersContent.style.display = 'none';
     auditContent.style.display = 'none';
     bugsContent.style.display = 'none';
 
-    // Reset tab styles
     if (usersTab) usersTab.style.borderBottom = '2px solid transparent';
     if (auditTab) auditTab.style.borderBottom = '2px solid transparent';
     if (bugsTab) bugsTab.style.borderBottom = '2px solid transparent';
@@ -1390,7 +1281,6 @@ DM.map = (() => {
       loadAuditLogIntoTab();
     } 
     else if (tab === 'bugs') {
-      // Bugs tab is now open to all logged-in users
       bugsContent.style.display = 'block';
       if (bugsTab) bugsTab.style.borderBottom = '2px solid #e07070';
       loadBugReports();
@@ -1446,12 +1336,10 @@ DM.map = (() => {
     }
   }
 
-  // ── BUG REPORTS (Visible to everyone) ────────────────────
-  async function loadBugReports() {
+  async function loadBugReports(attempt = 1) {
     const container = el('bug-reports-list');
     if (!container) return;
 
-    // Safety check
     if (!window.DM || !DM.db || typeof DM.db.getBugReports !== 'function') {
       if (attempt <= 5) {
         container.innerHTML = `
@@ -1471,7 +1359,6 @@ DM.map = (() => {
           </div>
         `;
       }
-      return;
       return;
     }
 
@@ -1534,12 +1421,12 @@ DM.map = (() => {
     try {
       await DM.db.deleteBugReport(id);
       toast('Bug report deleted');
-      // Refresh the list
       await loadBugReports();
     } catch (e) {
       toast('Failed to delete report: ' + e.message);
     }
   }
+
   function closeUsers() { el('user-modal').classList.add('hidden'); }
 
   async function refreshUsers() {
@@ -1560,7 +1447,6 @@ DM.map = (() => {
       }).join('') || '<div style="padding:14px;font-size:13px;color:var(--muted);">No users yet</div>';
     } catch (e) { c.innerHTML = `<div style="padding:14px;color:var(--red);font-size:13px;">${e.message}</div>`; }
 
-    // Re-apply tab visibility in case user level was just changed
     updateUserModalTabVisibility();
   }
 
@@ -1605,7 +1491,6 @@ DM.map = (() => {
     if (p && !p.classList.contains('hidden') && !p.contains(e.target)) closePopup();
   });
 
-  // Keyboard shortcuts (map page)
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       const addM = el('add-modal');
