@@ -261,69 +261,68 @@ DM.map = (() => {
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
-  // ── STABLE IMAGE-RELATIVE COORDINATES ───────────────────────────────────
-  // All positions are stored as percentages inside the map image content itself
-  // (0-100, where 50,50 is the center of the actual map artwork).
-  // This makes positions consistent across any monitor resolution or browser size.
+  // ── LIVE IMAGE-RELATIVE COORDINATES (most accurate) ──────────────────────
+  // We use the *actual* current on-screen rectangle of the <img> element
+  // (img.getBoundingClientRect()). This automatically accounts for:
+  // - object-fit: contain letterboxing
+  // - Current pan/zoom transform on #zoom-l (when at 1:1 it's the base)
+  // - Any browser subpixel / DPI differences
   //
-  // IMPORTANT: Placement always happens at 1:1 view (see togglePlace) to guarantee
-  // the math matches exactly between click and render.
+  // This is the most reliable way to make click == marker position.
 
-  function getStableImageRect() {
-    const container = el('map-area');
+  function getLiveImageRect() {
     const img = el('map-img');
+    const container = el('map-area');
 
-    if (!container || !img || !img.naturalWidth || !img.naturalHeight) {
+    if (!img || !container) {
       const r = container ? container.getBoundingClientRect() : { left: 0, top: 0, width: 800, height: 600 };
       return { left: 0, top: 0, width: r.width, height: r.height };
     }
 
-    const cr = container.getBoundingClientRect();
-    const cw = cr.width;
-    const ch = cr.height;
-    const ir = img.naturalWidth / img.naturalHeight;
-    const cratio = cw / ch;
+    const imgRect = img.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
 
-    let w, h, ox, oy;
-
-    if (ir > cratio) {
-      w = cw;
-      h = cw / ir;
-      ox = 0;
-      oy = (ch - h) / 2;
-    } else {
-      h = ch;
-      w = ch * ir;
-      oy = 0;
-      ox = (cw - w) / 2;
+    // If the image hasn't loaded yet, fall back to container
+    if (imgRect.width < 10 || imgRect.height < 10) {
+      return {
+        left: 0,
+        top: 0,
+        width: containerRect.width,
+        height: containerRect.height
+      };
     }
 
-    return { left: ox, top: oy, width: w, height: h };
+    return {
+      left: imgRect.left - containerRect.left,
+      top: imgRect.top - containerRect.top,
+      width: imgRect.width,
+      height: imgRect.height
+    };
   }
 
   function clientToImagePercent(clientX, clientY) {
-    const rect = getStableImageRect();
-    const cr = el('map-area').getBoundingClientRect();
+    const rect = getLiveImageRect();
+    const containerRect = el('map-area').getBoundingClientRect();
 
-    const ix = clientX - cr.left - rect.left;
-    const iy = clientY - cr.top - rect.top;
+    const xInImage = clientX - containerRect.left - rect.left;
+    const yInImage = clientY - containerRect.top - rect.top;
 
     return {
-      x: Math.max(0, Math.min(100, (ix / rect.width) * 100)),
-      y: Math.max(0, Math.min(100, (iy / rect.height) * 100))
+      x: Math.max(0, Math.min(100, (xInImage / rect.width) * 100)),
+      y: Math.max(0, Math.min(100, (yInImage / rect.height) * 100))
     };
   }
 
   function imagePercentToLayerPercent(imgX, imgY) {
-    const rect = getStableImageRect();
-    const cr = el('map-area').getBoundingClientRect();
+    const rect = getLiveImageRect();
+    const containerRect = el('map-area').getBoundingClientRect();
 
-    const sx = cr.left + rect.left + (imgX / 100) * rect.width;
-    const sy = cr.top + rect.top + (imgY / 100) * rect.height;
+    const screenX = containerRect.left + rect.left + (imgX / 100) * rect.width;
+    const screenY = containerRect.top + rect.top + (imgY / 100) * rect.height;
 
     return {
-      x: ((sx - cr.left) / cr.width) * 100,
-      y: ((sy - cr.top) / cr.height) * 100
+      x: ((screenX - containerRect.left) / containerRect.width) * 100,
+      y: ((screenY - containerRect.top) / containerRect.height) * 100
     };
   }
 
@@ -506,6 +505,9 @@ DM.map = (() => {
 
       closeAddModal();
       if (placing) togglePlace();
+
+      // Force immediate re-render so the new marker appears at the exact clicked position
+      renderMarkers();
     } catch (e) { 
       console.error('Failed to save marker:', e);
       toast('Error: ' + e.message); 
