@@ -44,26 +44,6 @@ DM.db = (() => {
     return data || [];
   }
 
-  async function addMarker(user, m) {
-    if (!user.canAdd) throw new Error('Insufficient access level');
-    const { error } = await dmDB.from('markers').insert({
-      name:             m.name,
-      description:      m.description    || '',
-      image_url:        m.imageUrl       || '',
-      category:         m.category       || 'poi',
-      zone:             m.zone,
-      x:                m.x,
-      y:                m.y,
-      min_access_level: parseInt(m.minLevel) || 1,
-      created_by:       user.username,
-      created_by_level: user.level
-    });
-    if (error) {
-      console.error('Supabase markers insert failed:', error);
-      throw new Error(error.message || 'Insert failed — check RLS on markers table');
-    }
-  }
-
   async function deleteMarker(user, marker) {
     if (!DM.auth.canDelete(marker, user)) throw new Error('No permission');
     const { error } = await dmDB.from('markers').delete().eq('id', marker.id);
@@ -71,30 +51,6 @@ DM.db = (() => {
 
     // Log the deletion
     await logAudit(marker.id, 'delete', user.username, { name: marker.name });
-  }
-
-  async function updateMarker(user, markerId, m) {
-    console.log('[updateMarker] Called for', markerId);
-
-    // Reuse delete permission for edit permission (creator or high rank)
-    const tempMarker = { id: markerId, created_by: m.created_by };
-    if (!DM.auth.canDelete(tempMarker, user)) {
-      console.warn('[updateMarker] Permission denied');
-      throw new Error('No permission to edit this location');
-    }
-
-    const { error } = await dmDB.from('markers').update({
-      name:             m.name,
-      description:      m.description    || '',
-      image_url:        m.imageUrl       || '',
-      category:         m.category       || 'poi',
-      min_access_level: parseInt(m.minLevel) || 1,
-    }).eq('id', markerId);
-
-    if (error) {
-      console.error('Supabase markers update failed:', error);
-      throw new Error(error.message || 'Update failed');
-    }
   }
 
   // ── USERS ────────────────────────────────────────────────
@@ -341,25 +297,6 @@ DM.db = (() => {
     });
   }
 
-  // Lightweight position-only update (used for "Move Location")
-  async function updateMarkerPosition(user, markerId, x, y, createdBy) {
-    // Permission check is now done by the caller (map.js) to avoid scope issues.
-    // We still do a basic sanity check here.
-
-    const { error } = await dmDB.from('markers').update({
-      x: x,
-      y: y,
-      updated_at: new Date().toISOString()
-    }).eq('id', markerId);
-
-    if (error) {
-      console.error('Position update failed:', error);
-      throw new Error(error.message || 'Failed to move marker');
-    }
-
-    await logAudit(markerId, 'update', user.username, { action: 'moved position' });
-  }
-
   // ── ENHANCED ADD (with audit) ────────────────────────────
   async function addMarker(user, m) {
     if (!user.canAdd) throw new Error('Insufficient access level');
@@ -448,7 +385,6 @@ DM.db = (() => {
     // Bug Reports
     reportBug,
     getBugReports,
-    deleteBugReport,
-    updateMarkerPosition
+    deleteBugReport
   };
 })();

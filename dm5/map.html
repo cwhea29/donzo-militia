@@ -28,12 +28,13 @@
     <button id="users-btn" class="cbtn hidden" onclick="DM.map.openUsers()">👥 Users</button>
     <button class="cbtn" onclick="DM.map.resetView()">⌖ Reset</button>
     <button class="cbtn" onclick="DM.map.toggleSidebar()">Locations ▾</button>
+    <button class="cbtn" title="Report a bug or issue" onclick="DM.map.quickReportBug()">🐛</button>
   </div>
 </div>
 
 <div class="map-area" id="map-area"
-     onclick="DM.map && DM.map.onMapClick && DM.map.onMapClick(event)"
-     onmousemove="DM.map && DM.map.onMouseMove && DM.map.onMouseMove(event)">
+     onclick="DM.map.onMapClick(event)"
+     onmousemove="DM.map.onMouseMove(event)">
   <div id="pan-c">
     <div id="zoom-l">
       <!--
@@ -224,9 +225,10 @@
       <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">COMMENTS</div>
       <div id="pp-comments-list" style="max-height:120px; overflow-y:auto; font-size:12px; margin-bottom:6px;"></div>
       <div style="display:flex; gap:4px;">
-        <input type="text" id="pp-comment-input" placeholder="Add a note..." style="flex:1; font-size:11px; padding:4px 6px;">
+        <input type="text" id="pp-comment-input" placeholder="Add a note..." style="flex:1; font-size:11px; padding:4px 6px;" onkeydown="if(event.key==='Enter'){DM.map.addCommentToMarker();}">
         <button onclick="DM.map.addCommentToMarker()" style="font-size:10px; padding:2px 8px;">Post</button>
       </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:1px;">Press Enter to post</div>
     </div>
   </div>
   <div class="popup-foot hidden" id="pp-foot">
@@ -302,7 +304,7 @@
           <!-- Populated by JS -->
         </div>
         <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
-          <button onclick="if (DM && DM.map) DM.map.loadBugReports(1)" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
+          <button onclick="DM.map.loadBugReports()" class="btn btn-ghost btn-sm">Refresh Bug Reports</button>
         </div>
       </div>
     </div>

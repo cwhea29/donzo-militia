@@ -876,16 +876,48 @@ DM.map = (() => {
   }
 
   function showCreateGroupModal() {
-    const name = prompt('Enter new group name (e.g. "Casino Heist", "Stores", "Banks"):');
-    if (!name || !name.trim()) return;
+    const container = el('group-filters');
+    if (!container) return;
 
-    DM.db.createGroup(user, name.trim())
-      .then(newGroup => {
-        allGroups.push(newGroup);
-        toast(`Group "${newGroup.name}" created`);
+    // Remove any previous quick-create
+    const old = el('group-quick-create');
+    if (old) old.remove();
+
+    const wrap = document.createElement('div');
+    wrap.id = 'group-quick-create';
+    wrap.style.cssText = 'margin-top:6px; display:flex; gap:4px;';
+    wrap.innerHTML = `
+      <input id="gc-name" type="text" placeholder="New group name..." style="flex:1; font-size:11px; padding:4px 6px;">
+      <button id="gc-ok" style="font-size:10px; padding:2px 8px;">Create</button>
+      <button id="gc-x" style="font-size:10px; padding:2px 6px;">✕</button>
+    `;
+    container.parentElement.appendChild(wrap);
+
+    const inp = wrap.querySelector('#gc-name');
+    const ok = wrap.querySelector('#gc-ok');
+    const x = wrap.querySelector('#gc-x');
+
+    function cleanup() { wrap.remove(); }
+
+    x.onclick = cleanup;
+    ok.onclick = async () => {
+      const nm = (inp.value || '').trim();
+      if (!nm) { cleanup(); return; }
+      try {
+        const ng = await DM.db.createGroup(user, nm);
+        allGroups.push(ng);
+        toast(`Group "${ng.name}" created`);
         renderGroupFilters();
-      })
-      .catch(e => toast('Failed to create group: ' + e.message));
+      } catch (e) {
+        toast('Failed to create group: ' + e.message);
+      }
+      cleanup();
+    };
+    inp.onkeydown = (e) => {
+      if (e.key === 'Enter') ok.click();
+      if (e.key === 'Escape') cleanup();
+    };
+    setTimeout(() => inp.focus(), 0);
   }
 
   async function loadGroupSelectionForModal(markerId = null) {
@@ -1059,7 +1091,9 @@ DM.map = (() => {
                 ${cat ? cat.icon + ' ' : ''}<strong>${marker ? marker.name : 'Unknown Marker'}</strong>
                 ${step.notes ? `<div style="font-size:11px; color:var(--muted);">${step.notes}</div>` : ''}
               </div>
-              <div>
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button onclick="DM.map.moveStep('${planId}', '${step.id}', -1)" style="font-size:11px; padding:1px 6px;" title="Move up">↑</button>
+                <button onclick="DM.map.moveStep('${planId}', '${step.id}', 1)" style="font-size:11px; padding:1px 6px;" title="Move down">↓</button>
                 <button onclick="DM.map.removeStepFromPlan('${step.id}', '${planId}')" style="font-size:10px; color:#c0392b;">Remove</button>
               </div>
             </div>
@@ -1147,9 +1181,31 @@ DM.map = (() => {
     }
   }
 
-  function closeAuditLog() {
-    const modal = el('audit-log-modal');
-    if (modal) modal.classList.add('hidden');
+  async function moveStep(planId, stepId, dir) {
+    try {
+      const steps = await DM.db.getHeistPlanSteps(planId);
+      const idx = steps.findIndex(s => s.id === stepId);
+      if (idx < 0) return;
+
+      const newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= steps.length) return;
+
+      // Swap orders
+      const a = steps[idx];
+      const b = steps[newIdx];
+      const tmp = a.step_order;
+      a.step_order = b.step_order;
+      b.step_order = tmp;
+
+      await DM.db.updateStepOrder(planId, [
+        { id: a.id, step_order: a.step_order },
+        { id: b.id, step_order: b.step_order }
+      ]);
+
+      await viewHeistPlan(planId);
+    } catch (e) {
+      toast('Reorder failed: ' + e.message);
+    }
   }
 
   function openAuditLogFromNav() {
@@ -1198,10 +1254,10 @@ DM.map = (() => {
       const f = arr.filter(m => {
         const matchesSearch = m.name.toLowerCase().includes(q) || (m.description||'').toLowerCase().includes(q);
         const matchesCategory = activeCategories.size === 0 || activeCategories.has(m.category);
-        return matchesSearch && matchesCategory;
+        const matchesGroup = activeGroups.size === 0 || (markerGroupsMap.get(m.id) || []).some(g => activeGroups.has(g));
+        return matchesSearch && matchesCategory && matchesGroup;
       });
       if (!f.length) return '';
-      renderMarkers();
       return `<div class="sb-sec">${title} <span>(${f.length})</span></div>` +
         f.map(m => {
           const v = VIS[m.min_access_level] || VIS[1];
@@ -1225,8 +1281,11 @@ DM.map = (() => {
     if (!m) return;
     const jump = () => {
       const r = el('map-area').getBoundingClientRect();
-      px = r.width/2  - (m.x/100)*r.width*scale;
-      py = r.height/2 - (m.y/100)*r.height*scale;
+      // m.x / m.y are 0-1 normalized fractions of the source image (not percent)
+      const targetX = m.x * r.width;
+      const targetY = m.y * r.height;
+      px = r.width/2  - targetX * scale;
+      py = r.height/2 - targetY * scale;
       applyT();
       showPopup(m, { clientX: r.left+r.width/2, clientY: r.top+r.height/2, stopPropagation:()=>{} });
     };
@@ -1443,6 +1502,26 @@ DM.map = (() => {
     }
   }
 
+  function quickReportBug() {
+    const msg = prompt('Describe the bug or issue (will be sent to logs):');
+    if (!msg || !msg.trim()) return;
+    if (DM && DM.db && DM.db.reportBug) {
+      DM.db.reportBug({
+        message: msg.trim(),
+        url: location.href,
+        username: user ? user.username : null,
+        userLevel: user ? user.level : null
+      });
+      toast('Bug report sent. Thank you.');
+      // Optionally open the bugs tab for leaders
+      if (user && user.level === 11) {
+        setTimeout(() => { openUsers(); switchUserModalTab('bugs'); }, 400);
+      }
+    } else {
+      toast('Reporting unavailable right now');
+    }
+  }
+
   function closeUsers() { el('user-modal').classList.add('hidden'); }
 
   async function refreshUsers() {
@@ -1534,8 +1613,8 @@ DM.map = (() => {
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,
-    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan,
+    openHeistPlans, closeHeistPlans, createNewHeistPlan, viewHeistPlan, deleteHeistPlan, addMarkerToHeistPlan, removeStepFromPlan, moveStep,
     switchUserModalTab, loadAuditLogIntoTab, loadBugReports, updateUserModalTabVisibility,
-    openAuditLogFromNav, openBugsFromNav, deleteBugReport, syncMarkerGroups, loadGroupSelectionForModal
+    openAuditLogFromNav, openBugsFromNav, deleteBugReport, syncMarkerGroups, loadGroupSelectionForModal, quickReportBug
   };
 })();

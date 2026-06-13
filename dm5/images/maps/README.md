@@ -18,7 +18,7 @@ These paths are wired up in `dm5/js/config.js` under the `MAPS` constant.
 
 ## Notes
 - The site uses `object-fit: contain`, so the exact pixel dimensions don't have to be identical between layers.
-- Marker coordinates are stored as percentages (0–100%), so they remain correctly placed even when you change background images.
+- Marker coordinates are stored as normalized 0–1 fractions of the source image (not screen % or pixels). This keeps them stable across layers, zooms, and different screen sizes.
 - Some files are quite large (especially the satellite layers). This can cause slower initial loads on slower connections. Consider optimizing or using lighter versions if needed.
 - If any individual layer fails to load, the map automatically shows a nice stylized fallback while keeping every interactive feature (panning, zooming, placing markers, realtime updates, etc.) fully working.
 

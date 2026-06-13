@@ -35,7 +35,10 @@
     </form>
     <div class="login-err" id="lerr"></div>
   </div>
-  <div class="login-foot"><span>// DONZO v3.0</span></div>
+  <div class="login-foot">
+    <span>// DONZO v3.0</span>
+    <span style="color:#5a664f">Secure ops only — plaintext credentials</span>
+  </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
@@ -48,6 +51,10 @@
     location.href = 'map.html';
   }
 
+  // Convenience: remember last username
+  const lastUser = localStorage.getItem('dm_last_user');
+  if (lastUser) document.getElementById('lu').value = lastUser;
+
   async function doLogin() {
     const e=document.getElementById('lerr'),btn=document.getElementById('lbtn');
     e.textContent='';
@@ -57,11 +64,15 @@
     try {
       const r = await DM.auth.login(u, p);
       if (r.ok) {
+        try { localStorage.setItem('dm_last_user', u); } catch(_) {}
         location.href = 'map.html';
       } else {
         e.textContent = '// ' + r.err;
         btn.textContent = 'GAIN ACCESS';
         btn.disabled = false;
+        // Keep username, clear pw for retry
+        document.getElementById('lp').value = '';
+        document.getElementById('lp').focus();
       }
     } catch (err) {
       console.error('Unexpected login error:', err);

@@ -30,7 +30,7 @@
       <li><div class="snum">1</div><div class="stxt"><strong>Log in</strong> at the main page using your callsign and password. New? Ask a Commander to add you via the Users panel.</div></li>
       <li><div class="snum">2</div><div class="stxt"><strong>Select your zone</strong> — Los Santos (mainland) or ☠ Cayo Perico. Each zone has its own separate markers.</div></li>
       <li><div class="snum">3</div><div class="stxt"><strong>Choose a map layer</strong> — Atlas for overview, Roadmap for streets, or Satellite for terrain.</div></li>
-      <li><div class="snum">4</div><div class="stxt"><strong>Click any marker</strong> on the map to view its details. Locations hidden from your access level are completely invisible.</div></li>
+      <li><div class="snum">4</div><div class="stxt"><strong>Click any marker</strong> on the map to view its details, add comments, or (if authorized) edit/delete. Locations hidden from your access level are completely invisible.</div></li>
     </ol>
   </div>
 
@@ -107,6 +107,15 @@
   </div>
 
   <div class="psec">
+    <div class="sttl">🗂️ Groups, Comments &amp; Heist Plans</div>
+    <div class="sbody">
+      <p><strong>Groups</strong>: Tag locations with arbitrary labels ("Casino", "Stores", "Cayo Runs"). Use the sidebar filters or the checkboxes when placing/editing a marker. Create new groups from the Locations sidebar.</p>
+      <p><strong>Comments</strong>: Every location popup has a live comment thread. Only the original poster can edit or delete their comments. Great for updates ("heat high", "new cameras", "cleared").</p>
+      <p><strong>Heist Plans</strong>: Build ordered sequences of markers (steps). Open from the Locations sidebar. Add/remove/reorder steps. Perfect for multi-stage operations. Plans are org-wide.</p>
+    </div>
+  </div>
+
+  <div class="psec">
     <div class="sttl">➕ Adding a Location (Gunner / Level 4+)</div>
     <ol class="steps">
       <li><div class="snum">1</div><div class="stxt">Click <strong>📍 Place Marker</strong> in the controls bar. Your cursor changes to a crosshair.</div></li>
@@ -114,14 +123,14 @@
       <li><div class="snum">3</div><div class="stxt">Fill in the name (required), optional description, optional photo upload, category, and the <strong>minimum access level</strong> required to view this location (up to Boss only).</div></li>
       <li><div class="snum">4</div><div class="stxt">Click <strong>Save Location</strong>. It appears instantly for all users with the right clearance — no refresh needed.</div></li>
     </ol>
-    <div class="tip"><span class="tipico">🖼️</span><div class="tiptxt"><strong>Images:</strong> When adding a marker you can upload a photo directly — it is stored securely in Supabase Storage and delivered via CDN. No manual file placement needed.</div></div>
+    <div class="tip"><span class="tipico">🖼️</span><div class="tiptxt"><strong>Images:</strong> When adding a marker you can upload a photo directly — it is stored securely in Supabase Storage and delivered via CDN. No manual file placement needed. Groups let you tag locations (e.g. "Bank Jobs") for quick filtering.</div></div>
     <div class="tip danger" style="margin-top:10px;"><span class="tipico">⛔</span><div class="tiptxt"><strong>Think before setting visibility.</strong> Once saved, only a Commander can delete it. If you get the level wrong, ask a Commander to delete and re-add it.</div></div>
   </div>
 
   <div class="psec">
-    <div class="sttl">👥 User Management (Level 4 Only)</div>
-    <div class="sbody"><p>Commanders access the <strong>👥 Users</strong> button in the controls bar to add new members, change access levels, or remove users who have left the org. You can also add users directly in the Supabase dashboard under Table Editor → users.</p></div>
-    <div class="tip danger"><span class="tipico">⛔</span><div class="tiptxt"><strong>SECURITY NOTE — Passwords are stored in plain text in the Supabase users table.</strong> This is a known limitation of the current demo auth system. Use unique strong passwords. For any real operational use, migrate to proper Supabase Auth + Row Level Security + hashed passwords. Never reuse passwords from other sites.</div></div>
+    <div class="sttl">👥 User Management (Level 4+ — Commanders and above)</div>
+    <div class="sbody"><p>Commanders (and higher) access the <strong>👥 Users</strong> button in the controls bar to add new members, change access levels, or remove users who have left the org. You can also add users directly in the Supabase dashboard under Table Editor → users.</p></div>
+    <div class="tip danger"><span class="tipico">⛔</span><div class="tiptxt"><strong>SECURITY NOTE — Passwords are stored in plain text in the Supabase users table.</strong> The Supabase anon key is public in the client. Anyone who inspects the page can read/write data within their access level. Use unique strong passwords you do not use elsewhere. This is an internal tool — for production use, replace with proper Supabase Auth (email/pw + JWT), enable RLS policies on all tables, and move user creation to server-side or edge functions. Audit log everything.</div></div>
   </div>
 
 </div><!-- /pc -->
