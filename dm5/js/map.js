@@ -5,7 +5,8 @@ DM.map = (() => {
   let scale = 1, px = 0, py = 0;
   let panning = false, moved = false, lpx = 0, lpy = 0;
   let toastT, pendingImageUrl = null;
-  let editingMarkerId = null;   // NEW: for editing markers from popup
+  let editingMarkerId = null;
+  let resizeTimer = null;
 
   // Category filters state
   let activeCategories = new Set(); // empty = show all
@@ -68,6 +69,26 @@ DM.map = (() => {
       renderCategoryFilters();
       renderGroupFilters();
     });
+
+    setupResizeHandler();
+  }
+
+  function setupResizeHandler() {
+    const area = el('map-area');
+    const img = el('map-img');
+    if (!area) return;
+
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => renderMarkers(), 80);
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(onResize);
+      ro.observe(area);
+      if (img) ro.observe(img);
+    }
+    window.addEventListener('resize', onResize);
   }
 
   function setupGlobalErrorReporting() {
@@ -107,7 +128,7 @@ DM.map = (() => {
     if (fb) fb.remove();
 
     img.src = MAPS[curZone][curMap];
-    img.onload  = () => { img.style.opacity = '1'; no.classList.add('hidden'); };
+    img.onload  = () => { img.style.opacity = '1'; no.classList.add('hidden'); renderMarkers(); };
     img.onerror = () => {
       no.classList.remove('hidden');
       img.style.opacity = '0';
@@ -305,30 +326,49 @@ DM.map = (() => {
     };
   }
 
-  // Convert 0-1 image fraction into current screen position
-  function getScreenPosition(fracX, fracY) {
-    const rect = getLiveImageRect();
-    if (!rect) return { left: 0, top: 0 };
+  // Compute where object-fit:contain places the image inside the marker layer.
+  // Uses layout dimensions (not getBoundingClientRect) so markers stay pinned
+  // when the window resizes or the map is zoomed/panned.
+  function getImageDisplayBox() {
+    const layer = el('marker-layer');
+    if (!layer) return null;
 
-    return {
-      left: rect.left + fracX * rect.width,
-      top:  rect.top  + fracY * rect.height
-    };
+    const layerW = layer.clientWidth;
+    const layerH = layer.clientHeight;
+    if (layerW < 1 || layerH < 1) return null;
+
+    const natural = getNaturalSize();
+    const nw = natural.w;
+    const nh = natural.h;
+    if (!nw || !nh) return null;
+
+    const layerAspect = layerW / layerH;
+    const imgAspect = nw / nh;
+
+    let displayW, displayH, offsetX, offsetY;
+    if (imgAspect > layerAspect) {
+      displayW = layerW;
+      displayH = layerW / imgAspect;
+      offsetX = 0;
+      offsetY = (layerH - displayH) / 2;
+    } else {
+      displayH = layerH;
+      displayW = layerH * imgAspect;
+      offsetX = (layerW - displayW) / 2;
+      offsetY = 0;
+    }
+
+    return { layerW, layerH, displayW, displayH, offsetX, offsetY };
   }
 
-  // Convert screen position into % relative to the marker layer
-  function screenToLayerPercent(left, top) {
-    const layer = el('marker-layer');
-    const area = el('map-area');
+  function fractionToLayerPercent(fracX, fracY) {
+    const box = getImageDisplayBox();
+    if (!box) return { x: 50, y: 50 };
 
-    if (!layer || !area) return { x: 50, y: 50 };
-
-    const lrect = layer.getBoundingClientRect();
-    const arect = area.getBoundingClientRect();
-
+    const { layerW, layerH, displayW, displayH, offsetX, offsetY } = box;
     return {
-      x: ((left - arect.left) / arect.width) * 100,
-      y: ((top  - arect.top)  / arect.height) * 100
+      x: ((offsetX + fracX * displayW) / layerW) * 100,
+      y: ((offsetY + fracY * displayH) / layerH) * 100
     };
   }
 
@@ -476,6 +516,7 @@ DM.map = (() => {
     }
 
     const btn = el('save-btn');
+    const wasNewPlacement = !editingMarkerId;
     btn.innerHTML = '<span class="spin"></span>SAVING...'; btn.disabled = true;
 
     try {
@@ -512,7 +553,11 @@ DM.map = (() => {
       closeAddModal();
       if (placing) togglePlace();
 
-      // Force immediate re-render so the new marker appears at the exact clicked position
+      if (wasNewPlacement) {
+        location.reload();
+        return;
+      }
+
       renderMarkers();
     } catch (e) { 
       console.error('Failed to save marker:', e);
@@ -549,9 +594,7 @@ DM.map = (() => {
       .forEach(m => {
       const div = document.createElement('div');
       div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
-      // Use the exact same method as placement
-      const screenPos = getScreenPosition(m.x, m.y);
-      const layerPos = screenToLayerPercent(screenPos.left, screenPos.top);
+      const layerPos = fractionToLayerPercent(m.x, m.y);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
       const f   = fills[m.min_access_level] || fills[1];
@@ -1280,12 +1323,14 @@ DM.map = (() => {
     const m = markers.find(x => x.id === id);
     if (!m) return;
     const jump = () => {
+      const box = getImageDisplayBox();
       const r = el('map-area').getBoundingClientRect();
-      // m.x / m.y are 0-1 normalized fractions of the source image (not percent)
-      const targetX = m.x * r.width;
-      const targetY = m.y * r.height;
-      px = r.width/2  - targetX * scale;
-      py = r.height/2 - targetY * scale;
+      if (!box) return;
+      const layerPos = fractionToLayerPercent(m.x, m.y);
+      const localX = (layerPos.x / 100) * box.layerW;
+      const localY = (layerPos.y / 100) * box.layerH;
+      px = r.width / 2 - localX * scale;
+      py = r.height / 2 - localY * scale;
       applyT();
       showPopup(m, { clientX: r.left+r.width/2, clientY: r.top+r.height/2, stopPropagation:()=>{} });
     };
