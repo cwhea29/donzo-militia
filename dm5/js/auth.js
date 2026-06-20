@@ -19,8 +19,7 @@ DM.auth = (() => {
         .from('users')
         .select('*')
         .eq('username', u)
-        .limit(1)
-        .single();
+        .maybeSingle();
 
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 8000)
@@ -28,10 +27,11 @@ DM.auth = (() => {
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-      if (error || !data) {
+      if (error) {
         console.error('Supabase login error:', error);
-        return { ok: false, err: 'User not found' };
+        return { ok: false, err: 'Database error — check Supabase tables exist' };
       }
+      if (!data) return { ok: false, err: 'User not found' };
       if (data.password !== p) return { ok: false, err: 'Wrong password' };
 
       const lvl  = parseInt(data.access_level);

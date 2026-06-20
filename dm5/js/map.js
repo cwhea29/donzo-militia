@@ -283,47 +283,24 @@ DM.map = (() => {
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // BRAND NEW PLACEMENT SYSTEM — STARTED FROM SCRATCH
+  // COORDINATE SYSTEM — single source of truth
   // ═══════════════════════════════════════════════════════════════════════
   //
-  // This is a complete rewrite of the coordinate logic.
-  //
-  // Core rules:
-  // - We store positions as NORMALIZED 0-1 fractions of the SOURCE IMAGE.
-  // - We ALWAYS force 1:1 view when the user is placing (critical for accuracy).
-  // - We use ONLY the live img.getBoundingClientRect() for calculations.
-  // - Rendering uses the exact same live rect so click position == marker position.
-  //
-  // This is the simplest and most reliable pattern for image + object-fit:contain + transform zoom.
+  // - Store positions as 0-1 fractions of the source image.
+  // - Placement AND rendering both use getImageDisplayBox() (object-fit:contain math).
+  // - Never guess dimensions before the image has loaded (no 8192 fallback).
 
-  function getLiveImageRect() {
+  function isMapImageReady() {
     const img = el('map-img');
-    if (!img) return null;
-    return img.getBoundingClientRect();
+    return !!(img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
   }
 
   function getNaturalSize() {
     const img = el('map-img');
-    return {
-      w: img && img.naturalWidth ? img.naturalWidth : 8192,
-      h: img && img.naturalHeight ? img.naturalHeight : 8192
-    };
-  }
-
-  // Convert a mouse click into 0-1 position inside the source image
-  function getImageFraction(clientX, clientY) {
-    const rect = getLiveImageRect();
-    if (!rect || rect.width < 10) {
-      return { x: 0.5, y: 0.5 };
+    if (!img || !img.naturalWidth || !img.naturalHeight) {
+      return { w: 0, h: 0 };
     }
-
-    const fracX = (clientX - rect.left) / rect.width;
-    const fracY = (clientY - rect.top) / rect.height;
-
-    return {
-      x: Math.max(0, Math.min(1, fracX)),
-      y: Math.max(0, Math.min(1, fracY))
-    };
+    return { w: img.naturalWidth, h: img.naturalHeight };
   }
 
   // Compute where object-fit:contain places the image inside the marker layer.
@@ -372,6 +349,27 @@ DM.map = (() => {
     };
   }
 
+  // Convert a screen click into 0-1 position — same math as fractionToLayerPercent
+  function getImageFraction(clientX, clientY) {
+    const box = getImageDisplayBox();
+    if (!box) return null;
+
+    const layer = el('marker-layer');
+    if (!layer) return null;
+
+    const layerRect = layer.getBoundingClientRect();
+    const localX = (clientX - layerRect.left) / scale;
+    const localY = (clientY - layerRect.top) / scale;
+
+    const { displayW, displayH, offsetX, offsetY } = box;
+    if (displayW < 1 || displayH < 1) return null;
+
+    return {
+      x: Math.max(0, Math.min(1, (localX - offsetX) / displayW)),
+      y: Math.max(0, Math.min(1, (localY - offsetY) / displayH))
+    };
+  }
+
   // ── CLICK HANDLER ─────────────────────────────────────────
   function onMapClick(e) {
     if (!placing || !user.canAdd || moved) {
@@ -379,14 +377,28 @@ DM.map = (() => {
       return;
     }
 
-    // This is the only place we calculate position now
-    pending = getImageFraction(e.clientX, e.clientY);
+    if (!isMapImageReady()) {
+      toast('Map still loading — wait a moment and try again');
+      return;
+    }
+
+    const frac = getImageFraction(e.clientX, e.clientY);
+    if (!frac) {
+      toast('Could not read map position — try again');
+      return;
+    }
+
+    pending = frac;
     openAddModal();
   }
 
   function onMouseMove(e) {
     if (!placing) return;
     const f = getImageFraction(e.clientX, e.clientY);
+    if (!f) {
+      el('coords').textContent = 'X: — / Y: —';
+      return;
+    }
     el('coords').textContent = `X: ${(f.x * 100).toFixed(1)}%  Y: ${(f.y * 100).toFixed(1)}%`;
   }
 
@@ -397,11 +409,17 @@ DM.map = (() => {
       return;
     }
 
+    if (!placing && !isMapImageReady()) {
+      toast('Map still loading — wait for the image before placing markers');
+      return;
+    }
+
     placing = !placing;
 
     if (placing) {
-      resetView();        // Force clean 1:1 — this is non-negotiable for accuracy
+      resetView();
       moved = false;
+      renderMarkers();
     }
 
     const btn = el('place-btn');
@@ -513,6 +531,11 @@ DM.map = (() => {
 
     if (el('img-file').files[0] && !pendingImageUrl) {
       toast('Wait for image upload to finish'); return;
+    }
+
+    if (!editingMarkerId && !isMapImageReady()) {
+      toast('Map not ready — reload the page and try again');
+      return;
     }
 
     const btn = el('save-btn');
