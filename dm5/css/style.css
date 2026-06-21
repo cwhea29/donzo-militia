@@ -295,6 +295,7 @@ body.map-page { height: 100vh; display: flex; flex-direction: column; overflow: 
   width: 28px; height: 36px; padding: 0;
   background: rgba(8,12,7,.75); border: 1px solid var(--border);
   color: var(--tan-lt); cursor: pointer; font-size: 18px; line-height: 1;
+  z-index: 5;
 }
 .popup-gallery-nav.prev { left: 6px; }
 .popup-gallery-nav.next { right: 6px; }
@@ -302,10 +303,12 @@ body.map-page { height: 100vh; display: flex; flex-direction: column; overflow: 
 .popup-gallery-dots {
   position: absolute; bottom: 8px; left: 0; right: 0;
   display: flex; justify-content: center; gap: 5px;
+  z-index: 5;
 }
 .popup-gallery-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: rgba(255,255,255,.35); cursor: pointer;
+  pointer-events: auto;
 }
 .popup-gallery-dot.on { background: var(--tan-lt); }
 .popup-gallery-count {

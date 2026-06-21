@@ -748,10 +748,10 @@ DM.map = (() => {
       <div class="popup-gallery">
         <img class="popup-img" src="${images[idx]}" alt="${marker.name}" onerror="this.parentElement.innerHTML='<div class=popup-noimg>// IMAGE NOT FOUND</div>'">
         ${multi ? `
-          <button type="button" class="popup-gallery-nav prev" onclick="DM.map.prevPopupImage()">‹</button>
-          <button type="button" class="popup-gallery-nav next" onclick="DM.map.nextPopupImage()">›</button>
+          <button type="button" class="popup-gallery-nav prev" onclick="event.stopPropagation(); DM.map.prevPopupImage()">‹</button>
+          <button type="button" class="popup-gallery-nav next" onclick="event.stopPropagation(); DM.map.nextPopupImage()">›</button>
           <div class="popup-gallery-dots">
-            ${images.map((_, i) => `<span class="popup-gallery-dot${i === idx ? ' on' : ''}" onclick="DM.map.setPopupImage(${i})"></span>`).join('')}
+            ${images.map((_, i) => `<span class="popup-gallery-dot${i === idx ? ' on' : ''}" data-idx="${i}" onclick="event.stopPropagation(); DM.map.setPopupImage(${i})"></span>`).join('')}
           </div>
           <div class="popup-gallery-count">${idx + 1} / ${images.length}</div>
         ` : ''}
@@ -1761,7 +1761,10 @@ DM.map = (() => {
 
   document.addEventListener('click', e => {
     const p = el('popup');
-    if (p && !p.classList.contains('hidden') && !p.contains(e.target)) closePopup();
+    if (!p || p.classList.contains('hidden')) return;
+    const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+    if (path.includes(p) || (e.target.closest && e.target.closest('#popup'))) return;
+    closePopup();
   });
 
   document.addEventListener('keydown', e => {
