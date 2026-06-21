@@ -1,7 +1,7 @@
 /** DONZO — MAP MODULE */
 DM.map = (() => {
   let user, markers = [], activeId = null;
-  let curMap = 'atlas', curZone = 'mainland', placing = false, pending = null;
+  let curMap = 'satellite', curZone = 'mainland', placing = false, pending = null;
   let scale = 1, px = 0, py = 0;
   const MIN_ZOOM = 0.4;
   const MAX_ZOOM = 12;
