@@ -3,6 +3,9 @@ DM.map = (() => {
   let user, markers = [], activeId = null;
   let curMap = 'atlas', curZone = 'mainland', placing = false, pending = null;
   let scale = 1, px = 0, py = 0;
+  const MIN_ZOOM = 0.4;
+  const MAX_ZOOM = 12;
+  const MIN_MARKER_SCREEN = 0.32; // relative screen size at max zoom
   let panning = false, moved = false, lpx = 0, lpy = 0;
   let toastT, pendingImageUrls = [], imageUploadsInFlight = 0;
   let popupImageIndex = 0;
@@ -189,7 +192,7 @@ DM.map = (() => {
       const r  = wrap.getBoundingClientRect();
       const mx = e.clientX - r.left, my = e.clientY - r.top;
       const f  = e.deltaY < 0 ? 1.12 : 0.89;
-      const ns = Math.max(0.4, Math.min(12, scale * f));
+      const ns = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale * f));
       px = mx - (mx - px) * (ns / scale);
       py = my - (my - py) * (ns / scale);
       scale = ns; applyT();
@@ -253,7 +256,7 @@ DM.map = (() => {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-        const newScale = Math.max(0.4, Math.min(12, initialScale * (dist / initialDist)));
+        const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialScale * (dist / initialDist)));
         const r = wrap.getBoundingClientRect();
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
@@ -277,8 +280,24 @@ DM.map = (() => {
     });
   }
 
+  function getMarkerScreenFactor() {
+    const t = (scale - 1) / (MAX_ZOOM - 1);
+    return Math.max(MIN_MARKER_SCREEN, 1 - t * (1 - MIN_MARKER_SCREEN));
+  }
+
+  function getMarkerCounterScale() {
+    return getMarkerScreenFactor() / scale;
+  }
+
+  function updateMarkerScales() {
+    const layer = el('marker-layer');
+    if (!layer) return;
+    layer.style.setProperty('--marker-scale', getMarkerCounterScale());
+  }
+
   function applyT() {
     el('zoom-l').style.transform = `translate(${px}px,${py}px) scale(${scale})`;
+    updateMarkerScales();
   }
 
   function resetView() { scale = 1; px = 0; py = 0; applyT(); }
@@ -671,6 +690,8 @@ DM.map = (() => {
       div.addEventListener('click', e => { e.stopPropagation(); showPopup(m, e); });
       layer.appendChild(div);
     });
+
+    updateMarkerScales();
   }
 
   // ── POPUP ────────────────────────────────────────────────

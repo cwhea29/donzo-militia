@@ -277,8 +277,15 @@ body.map-page { height: 100vh; display: flex; flex-direction: column; overflow: 
 
 /* Markers */
 #marker-layer { position: absolute; inset: 0; pointer-events: none; }
-.marker { position: absolute; transform: translate(-50%,-100%); cursor: pointer; pointer-events: all; transition: transform .15s; z-index: 5; }
-.marker:hover { transform: translate(-50%,-100%) scale(1.25); }
+.marker {
+  position: absolute;
+  transform: translate(-50%, -100%) scale(var(--marker-scale, 1));
+  cursor: pointer; pointer-events: all; z-index: 5;
+}
+.marker:hover {
+  transform: translate(-50%, -100%) scale(calc(var(--marker-scale, 1) * 1.25));
+  transition: transform .15s;
+}
 .mpin { width: 20px; height: 26px; } .mpin svg { width: 100%; height: 100%; }
 .mpulse { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); width: 8px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.55); animation: pulse 2.2s ease-out infinite; }
 .marker.cayo .mpulse { background: rgba(100,200,255,0.55); }
