@@ -5,7 +5,7 @@ DM.map = (() => {
   let scale = 1, px = 0, py = 0;
   const MIN_ZOOM = 0.4;
   const MAX_ZOOM = 12;
-  const MIN_MARKER_SCREEN = 0.7; // relative screen size at max zoom
+  const MIN_MARKER_SCREEN = 1.4; // relative screen size at max zoom (~2× prior 0.7 setting)
   let panning = false, moved = false, lpx = 0, lpy = 0;
   let toastT, pendingImageUrls = [], imageUploadsInFlight = 0;
   let popupImageIndex = 0;
