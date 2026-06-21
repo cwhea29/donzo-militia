@@ -38,6 +38,12 @@ const VIS = {
   11: { label:'Boss Only',   icon:'👑', color:'#c0392b' }
 };
 
+const ZONES = {
+  mainland: { label: 'LOS SANTOS',  short: 'Los Santos',  popup: '📍 Los Santos',  tab: 'Los Santos',  wip: false, css: '' },
+  cayo:     { label: 'CAYO PERICO', short: 'Cayo',        popup: '☠ Cayo Perico', tab: '☠ Cayo',        wip: false, css: 'cayo' },
+  roxwood:  { label: 'ROXWOOD',     short: 'Roxwood',     popup: '🌲 Roxwood',     tab: '🌲 Roxwood',    wip: true,  css: 'roxwood' }
+};
+
 const MAPS = {
   mainland: {
     atlas:     'images/maps/GTAV_ATLUS_8192x8192.png',
@@ -48,6 +54,11 @@ const MAPS = {
     atlas:     'images/maps/CayoPerico-GTAO-SnapmaticAtlasMap.webp',
     roadmap:   'images/maps/CayoPerico-GTAO-Map.webp',
     satellite: 'images/maps/CayoPerico-GTAO-SatelliteMap.webp'
+  },
+  roxwood: {
+    atlas:     'images/maps/Roxwood-Atlas.webp',
+    roadmap:   'images/maps/Roxwood-Roadmap.webp',
+    satellite: 'images/maps/Roxwood-Satellite.webp'
   }
 };
 

@@ -26,6 +26,10 @@ DM.map = (() => {
 
   function el(id) { return document.getElementById(id); }
 
+  function zoneInfo(zone) { return ZONES[zone] || ZONES.mainland; }
+  function isZoneWip(zone) { return !!zoneInfo(zone).wip; }
+  function zoneCss(zone) { const c = zoneInfo(zone).css; return c ? ' ' + c : ''; }
+
   // ── INIT ────────────────────────────────────────────────
   function init(u) {
     user = u;
@@ -123,13 +127,43 @@ DM.map = (() => {
   }
 
   // ── MAP IMG ─────────────────────────────────────────────
+  function updateZoneUI() {
+    const info = zoneInfo(curZone);
+    const wip = info.wip;
+
+    const wipEl = el('zone-wip');
+    if (wipEl) wipEl.classList.toggle('hidden', !wip);
+
+    document.querySelectorAll('.tab').forEach(t => {
+      t.disabled = wip;
+      t.classList.toggle('disabled', wip);
+    });
+
+    if (wip && placing) cancelPlacing();
+
+    const zl = el('zone-lbl');
+    if (zl) {
+      zl.textContent = info.label + (wip ? ' • WIP' : '');
+      zl.className = 'sv' + zoneCss(curZone);
+    }
+  }
+
   function loadMap() {
     const img = el('map-img');
     const no = el('no-img');
     img.style.opacity = '0';
-    // Clear any previous fallback
     const fb = el('map-fallback');
     if (fb) fb.remove();
+
+    updateZoneUI();
+
+    if (isZoneWip(curZone)) {
+      img.removeAttribute('src');
+      no.classList.add('hidden');
+      useFallbackMap();
+      renderMarkers();
+      return;
+    }
 
     img.src = MAPS[curZone][curMap];
     img.onload  = () => { img.style.opacity = '1'; no.classList.add('hidden'); renderMarkers(); };
@@ -145,22 +179,30 @@ DM.map = (() => {
     const no = el('no-img');
     no.classList.add('hidden');
 
-    // Remove existing fallback if any
     const old = el('map-fallback');
     if (old) old.remove();
 
+    const info = zoneInfo(curZone);
     const fb = document.createElement('div');
     fb.id = 'map-fallback';
-    fb.className = 'map-fallback ' + (curZone === 'cayo' ? 'cayo' : '');
+    fb.className = 'map-fallback' + zoneCss(curZone);
+    const sub = info.wip ? 'WORK IN PROGRESS' : 'FALLBACK • NO IMAGE';
+    const hint = info.wip
+      ? '// Map coming soon — explore & view markers only'
+      : '// Drag to pan • Scroll to zoom • Click to place markers';
     fb.innerHTML = `
       <div class="fb-grid"></div>
-      <div class="fb-label">${curZone === 'cayo' ? 'CAYO PERICO' : 'LOS SANTOS'} <span class="fb-sub">(FALLBACK • NO IMAGE)</span></div>
-      <div class="fb-hint">// Drag to pan • Scroll to zoom • Click to place markers</div>
+      <div class="fb-label">${info.label} <span class="fb-sub">(${sub})</span></div>
+      <div class="fb-hint">${hint}</div>
     `;
     wrap.insertBefore(fb, el('marker-layer'));
   }
 
   function swapLayer(key, btn) {
+    if (isZoneWip(curZone)) {
+      toast('Map layers unavailable — Roxwood is work in progress');
+      return;
+    }
     curMap = key;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
     btn.classList.add('on');
@@ -172,16 +214,14 @@ DM.map = (() => {
     document.querySelectorAll('.ztab').forEach(t => t.classList.remove('on'));
     btn.classList.add('on');
     scale = 1; px = 0; py = 0; applyT();
-    loadMap(); 
+    loadMap();
     refreshMarkerGroups().then(() => {
-      renderMarkers(); 
+      renderMarkers();
       renderSidebar();
       renderGroupFilters();
     });
     closePopup();
-    const zl = el('zone-lbl');
-    zl.textContent = zone === 'cayo' ? 'CAYO PERICO' : 'LOS SANTOS';
-    zl.className = 'sv' + (zone === 'cayo' ? ' cayo' : '');
+    updateZoneUI();
   }
 
   // ── PAN / ZOOM ───────────────────────────────────────────
@@ -392,6 +432,7 @@ DM.map = (() => {
 
   // ── CLICK HANDLER ─────────────────────────────────────────
   function onMapClick(e) {
+    if (isZoneWip(curZone)) return;
     if (!placing || !user.canAdd || moved) {
       if (placing && moved) console.log('[Map] Click blocked because moved flag was true');
       return;
@@ -422,10 +463,28 @@ DM.map = (() => {
     el('coords').textContent = `X: ${(f.x * 100).toFixed(1)}%  Y: ${(f.y * 100).toFixed(1)}%`;
   }
 
+  function cancelPlacing() {
+    if (!placing) return;
+    placing = false;
+    const btn = el('place-btn');
+    if (btn) { btn.classList.remove('on'); btn.textContent = '📍 Place Marker'; }
+    const area = el('map-area');
+    if (area) area.style.cursor = 'default';
+    const sdot = el('sdot');
+    if (sdot) sdot.className = 'sdot';
+    const smode = el('smode');
+    if (smode) smode.textContent = 'VIEW MODE';
+  }
+
   // ── PLACE MODE ───────────────────────────────────────────
   function togglePlace() {
     if (!user.canAdd) {
       toast('You do not have permission to place markers');
+      return;
+    }
+
+    if (isZoneWip(curZone)) {
+      toast('Roxwood is work in progress — marker placement coming soon');
       return;
     }
 
@@ -671,7 +730,7 @@ DM.map = (() => {
       })
       .forEach(m => {
       const div = document.createElement('div');
-      div.className = 'marker' + (m.zone==='cayo'?' cayo':'');
+      div.className = 'marker' + zoneCss(m.zone);
       const layerPos = fractionToLayerPercent(m.x, m.y);
       div.style.cssText = `left:${layerPos.x}%;top:${layerPos.y}%;`;
       const ico = (CATS[m.category] || CATS.other).icon;
@@ -704,10 +763,10 @@ DM.map = (() => {
     const popup = el('popup');
 
     el('pp-name').textContent = m.name;
-    el('pp-name').className   = 'popup-name' + (m.zone==='cayo'?' cayo':'');
+    el('pp-name').className   = 'popup-name' + zoneCss(m.zone);
     el('pp-desc').textContent = m.description || '';
-    el('pp-zone').textContent = m.zone==='cayo' ? '☠ Cayo Perico' : '📍 Los Santos';
-    el('pp-zone').className   = 'popup-zone' + (m.zone==='cayo'?' cayo':'');
+    el('pp-zone').textContent = zoneInfo(m.zone).popup;
+    el('pp-zone').className   = 'popup-zone' + zoneCss(m.zone);
     el('pp-vis').innerHTML    = `<span style="color:${vis.color}">${vis.icon} ${vis.label}</span>`;
     el('pp-cat').textContent  = cat.label;
     el('pp-meta').textContent = `Added by ${m.created_by||'—'} (${lvl.name||'Unknown'})`;
@@ -1420,10 +1479,13 @@ DM.map = (() => {
   function renderSidebar(filter = '') {
     const list = el('sb-list');
     const q    = filter.toLowerCase();
-    const main = markers.filter(m => m.zone === 'mainland');
-    const cayo = markers.filter(m => m.zone === 'cayo');
+    const main    = markers.filter(m => m.zone === 'mainland');
+    const cayo    = markers.filter(m => m.zone === 'cayo');
+    const roxwood = markers.filter(m => m.zone === 'roxwood');
     el('stat-main').textContent = main.length;
     el('stat-cayo').textContent = cayo.length;
+    const statRox = el('stat-rox');
+    if (statRox) statRox.textContent = roxwood.length;
 
     if (!markers.length) { list.innerHTML = '<div class="sb-empty">// NO LOCATIONS YET</div>'; return; }
 
@@ -1439,7 +1501,7 @@ DM.map = (() => {
         f.map(m => {
           const v = VIS[m.min_access_level] || VIS[1];
           const c = (CATS[m.category]||CATS.other).icon;
-          return `<div class="sb-item${m.zone==='cayo'?' cayo':''}" onclick="DM.map.jumpTo('${m.id}')">
+          return `<div class="sb-item${zoneCss(m.zone)}" onclick="DM.map.jumpTo('${m.id}')">
             <span class="sb-ico">${c}</span>
             <div>
               <div class="sb-name">${m.name}</div>
@@ -1449,7 +1511,12 @@ DM.map = (() => {
         }).join('');
     };
 
-    list.innerHTML = sec('LOS SANTOS', main) + sec('☠ CAYO PERICO', cayo)
+    const roxSec = roxwood.length
+      ? sec('🌲 ROXWOOD', roxwood)
+      : (activeCategories.size === 0 && activeGroups.size === 0 && !q
+          ? '<div class="sb-sec">🌲 ROXWOOD <span>(WIP)</span></div><div class="sb-empty" style="padding:10px 14px;">// Coming soon</div>'
+          : '');
+    list.innerHTML = sec('LOS SANTOS', main) + sec('☠ CAYO PERICO', cayo) + roxSec
       || '<div class="sb-empty">// NO RESULTS</div>';
   }
 

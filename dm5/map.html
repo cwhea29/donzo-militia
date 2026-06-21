@@ -22,6 +22,7 @@
     <span class="clbl">Zone</span>
     <button class="ztab on" data-z="mainland" onclick="DM.map.swapZone('mainland',this)">Los Santos</button>
     <button class="ztab"    data-z="cayo"     onclick="DM.map.swapZone('cayo',this)">☠ Cayo</button>
+    <button class="ztab"    data-z="roxwood"  onclick="DM.map.swapZone('roxwood',this)">🌲 Roxwood</button>
   </div>
   <div class="ctrl-right">
     <button id="place-btn" class="hidden" onclick="DM.map.togglePlace()">📍 Place Marker</button>
@@ -50,12 +51,17 @@
           CayoPerico-GTAO-Map.webp
           CayoPerico-GTAO-SatelliteMap.webp
 
+        Roxwood (work in progress — map assets coming soon):
+          Roxwood-Atlas.webp / Roxwood-Roadmap.webp / Roxwood-Satellite.webp
+
         The site falls back gracefully if any layer is missing.
       -->
       <img id="map-img" alt="Map" draggable="false">
       <div id="marker-layer"></div>
     </div>
   </div>
+  <div id="zone-wip" class="zone-wip hidden">🚧 ROXWOOD — WORK IN PROGRESS</div>
+
   <div id="no-img" class="hidden">
     <div class="no-img-content">
       <div class="no-img-ico">🗺️</div>
@@ -98,6 +104,7 @@
     <div class="sb-stats">
       <div class="sb-stat"><span class="sb-n" id="stat-main">0</span> Los Santos</div>
       <div class="sb-stat"><span class="sb-n sb-nc" id="stat-cayo">0</span> Cayo</div>
+      <div class="sb-stat"><span class="sb-n sb-nr" id="stat-rox">0</span> Roxwood</div>
     </div>
     <div class="sb-list" id="sb-list"><div class="sb-empty">// Loading...</div></div>
   </div>
