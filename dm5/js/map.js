@@ -4,7 +4,8 @@ DM.map = (() => {
   let curMap = 'atlas', curZone = 'mainland', placing = false, pending = null;
   let scale = 1, px = 0, py = 0;
   let panning = false, moved = false, lpx = 0, lpy = 0;
-  let toastT, pendingImageUrl = null;
+  let toastT, pendingImageUrls = [], imageUploadsInFlight = 0;
+  let popupImageIndex = 0;
   let editingMarkerId = null;
   let resizeTimer = null;
 
@@ -53,9 +54,9 @@ DM.map = (() => {
       const btn = el('place-btn');
       if (btn) btn.classList.remove('hidden');
     }
-    if (user.level >= 4){ 
-      const b = el('users-btn'); 
-      if (b) b.classList.remove('hidden'); 
+    if (user.canManageUsers) {
+      const b = el('users-btn');
+      if (b) b.classList.remove('hidden');
     }
 
     // Initialize filters
@@ -440,16 +441,8 @@ DM.map = (() => {
       el('m-desc').value = markerToEdit.description || '';
       el('m-cat').value  = markerToEdit.category || 'poi';
       el('m-vis').value  = markerToEdit.min_access_level || '1';
-      pendingImageUrl    = markerToEdit.image_url || null;
-
-      const preview = el('img-preview');
-      if (markerToEdit.image_url) {
-        preview.innerHTML = `<img src="${markerToEdit.image_url}" alt="current">`;
-        preview.classList.add('has-img');
-        el('img-remove').classList.remove('hidden');
-      } else {
-        resetImageUpload();
-      }
+      pendingImageUrls = DM.db.getMarkerImages(markerToEdit);
+      renderImageGallery();
 
       el('save-btn').textContent = 'UPDATE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
@@ -458,8 +451,8 @@ DM.map = (() => {
       el('m-desc').value = '';
       el('m-cat').value  = 'poi';
       el('m-vis').value  = '1';
-      pendingImageUrl    = null;
-      resetImageUpload();
+      pendingImageUrls = [];
+      renderImageGallery();
       el('save-btn').textContent = 'SAVE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
     }
@@ -473,50 +466,93 @@ DM.map = (() => {
   function closeAddModal() {
     el('add-modal').classList.add('hidden');
     pending = null;
-    pendingImageUrl = null;
+    pendingImageUrls = [];
+    imageUploadsInFlight = 0;
     editingMarkerId = null;
     el('save-btn').textContent = 'SAVE LOCATION';
     el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
   }
 
-  function resetImageUpload() {
-    el('img-file').value = '';
-    el('img-preview').innerHTML = '<div class="img-placeholder">// No image selected</div>';
-    el('img-preview').classList.remove('has-img');
-    el('img-remove').classList.add('hidden');
-  }
+  function renderImageGallery() {
+    const gallery = el('img-gallery');
+    if (!gallery) return;
 
-  async function onImagePicked(input) {
-    const file = input.files[0];
-    if (!file) return;
+    const max = DM.db.MAX_MARKER_IMAGES || 10;
+    const hasImages = pendingImageUrls.length > 0;
 
-    if (!file.type.startsWith('image/')) { toast('Please select an image file'); return; }
-    if (file.size > 8 * 1024 * 1024)     { toast('Image must be under 8MB'); return; }
+    if (!hasImages) {
+      gallery.innerHTML = '<div class="img-placeholder">Click to add photos</div>';
+      gallery.classList.remove('has-img');
+    } else {
+      gallery.innerHTML = pendingImageUrls.map((url, i) => `
+        <div class="img-thumb">
+          <img src="${url}" alt="Image ${i + 1}">
+          <button type="button" class="img-thumb-remove" onclick="event.stopPropagation(); DM.map.removeImageAt(${i})" title="Remove">✕</button>
+        </div>
+      `).join('');
+      gallery.classList.add('has-img');
+    }
 
-    const reader = new FileReader();
-    reader.onload = ev => {
-      el('img-preview').innerHTML = `<img src="${ev.target.result}" alt="preview">`;
-      el('img-preview').classList.add('has-img');
-      el('img-remove').classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
-
-    el('img-upload-status').textContent = '// Uploading...';
-    try {
-      pendingImageUrl = await DM.db.uploadImage(file);
-      el('img-upload-status').textContent = '✓ Ready';
-      el('img-upload-status').style.color = 'var(--green-lt)';
-    } catch (e) {
-      el('img-upload-status').textContent = '// Upload failed: ' + e.message;
-      el('img-upload-status').style.color = '#e05050';
-      pendingImageUrl = null;
+    const status = el('img-upload-status');
+    if (status && imageUploadsInFlight === 0) {
+      status.textContent = hasImages ? `${pendingImageUrls.length}/${max} images` : '';
+      status.style.color = 'var(--muted)';
     }
   }
 
-  function removeImage() {
-    pendingImageUrl = null;
-    resetImageUpload();
-    el('img-upload-status').textContent = '';
+  async function onImagePicked(input) {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) return;
+
+    const max = DM.db.MAX_MARKER_IMAGES || 10;
+    const slots = max - pendingImageUrls.length;
+    if (slots <= 0) {
+      toast(`Maximum ${max} images per location`);
+      return;
+    }
+
+    const toUpload = files.slice(0, slots);
+    if (files.length > slots) toast(`Only ${slots} more image${slots === 1 ? '' : 's'} allowed`);
+
+    imageUploadsInFlight += toUpload.length;
+    el('img-upload-status').textContent = `// Uploading ${toUpload.length}...`;
+    el('img-upload-status').style.color = 'var(--muted)';
+
+    for (const file of toUpload) {
+      if (!file.type.startsWith('image/')) {
+        toast(`${file.name}: not an image file`);
+        imageUploadsInFlight--;
+        continue;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        toast(`${file.name}: must be under 8MB`);
+        imageUploadsInFlight--;
+        continue;
+      }
+
+      try {
+        const url = await DM.db.uploadImage(file);
+        pendingImageUrls.push(url);
+        renderImageGallery();
+      } catch (e) {
+        toast(`Upload failed: ${e.message}`);
+      } finally {
+        imageUploadsInFlight--;
+        if (imageUploadsInFlight === 0) {
+          el('img-upload-status').textContent = pendingImageUrls.length
+            ? `✓ ${pendingImageUrls.length}/${max} ready`
+            : '';
+          el('img-upload-status').style.color = pendingImageUrls.length ? 'var(--green-lt)' : 'var(--muted)';
+        }
+      }
+    }
+  }
+
+  function removeImageAt(index) {
+    if (index < 0 || index >= pendingImageUrls.length) return;
+    pendingImageUrls.splice(index, 1);
+    renderImageGallery();
   }
 
   async function saveMarker() {
@@ -529,8 +565,8 @@ DM.map = (() => {
       return;
     }
 
-    if (el('img-file').files[0] && !pendingImageUrl) {
-      toast('Wait for image upload to finish'); return;
+    if (imageUploadsInFlight > 0) {
+      toast('Wait for image uploads to finish'); return;
     }
 
     if (!editingMarkerId && !isMapImageReady()) {
@@ -549,7 +585,7 @@ DM.map = (() => {
         await DM.db.updateMarker(user, editingMarkerId, {
           name,
           description: el('m-desc').value.trim(),
-          imageUrl:    pendingImageUrl || '',
+          imageUrls:   [...pendingImageUrls],
           category:    el('m-cat').value,
           minLevel:    el('m-vis').value,
           created_by:  markers.find(x => x.id === editingMarkerId)?.created_by
@@ -560,7 +596,7 @@ DM.map = (() => {
           name,
           zone:        curZone,
           description: el('m-desc').value.trim(),
-          imageUrl:    pendingImageUrl || '',
+          imageUrls:   [...pendingImageUrls],
           category:    el('m-cat').value,
           minLevel:    el('m-vis').value,
           x: pending.x, y: pending.y
@@ -663,10 +699,8 @@ DM.map = (() => {
       updatedEl.textContent = '';
     }
 
-    const iw = el('pp-img');
-    iw.innerHTML = m.image_url
-      ? `<img class="popup-img" src="${m.image_url}" alt="${m.name}" onerror="this.parentElement.innerHTML='<div class=popup-noimg>// IMAGE NOT FOUND</div>'">`
-      : '<div class="popup-noimg">// NO IMAGE</div>';
+    popupImageIndex = 0;
+    renderPopupImages(m);
 
     const canManage = DM.auth.canDelete(m, user);
 
@@ -696,9 +730,65 @@ DM.map = (() => {
     popup.style.left = lx+'px'; popup.style.top = ly+'px';
   }
 
+  function renderPopupImages(marker) {
+    const iw = el('pp-img');
+    if (!iw) return;
+
+    const images = DM.db.getMarkerImages(marker);
+    if (!images.length) {
+      iw.innerHTML = '<div class="popup-noimg">// NO IMAGES</div>';
+      return;
+    }
+
+    const idx = Math.max(0, Math.min(popupImageIndex, images.length - 1));
+    popupImageIndex = idx;
+    const multi = images.length > 1;
+
+    iw.innerHTML = `
+      <div class="popup-gallery">
+        <img class="popup-img" src="${images[idx]}" alt="${marker.name}" onerror="this.parentElement.innerHTML='<div class=popup-noimg>// IMAGE NOT FOUND</div>'">
+        ${multi ? `
+          <button type="button" class="popup-gallery-nav prev" onclick="DM.map.prevPopupImage()">‹</button>
+          <button type="button" class="popup-gallery-nav next" onclick="DM.map.nextPopupImage()">›</button>
+          <div class="popup-gallery-dots">
+            ${images.map((_, i) => `<span class="popup-gallery-dot${i === idx ? ' on' : ''}" onclick="DM.map.setPopupImage(${i})"></span>`).join('')}
+          </div>
+          <div class="popup-gallery-count">${idx + 1} / ${images.length}</div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function setPopupImage(index) {
+    if (!activeId) return;
+    const m = markers.find(x => x.id === activeId);
+    if (!m) return;
+    popupImageIndex = index;
+    renderPopupImages(m);
+  }
+
+  function prevPopupImage() {
+    if (!activeId) return;
+    const m = markers.find(x => x.id === activeId);
+    if (!m) return;
+    const count = DM.db.getMarkerImages(m).length;
+    popupImageIndex = (popupImageIndex - 1 + count) % count;
+    renderPopupImages(m);
+  }
+
+  function nextPopupImage() {
+    if (!activeId) return;
+    const m = markers.find(x => x.id === activeId);
+    if (!m) return;
+    const count = DM.db.getMarkerImages(m).length;
+    popupImageIndex = (popupImageIndex + 1) % count;
+    renderPopupImages(m);
+  }
+
   function closePopup() { 
     el('popup').classList.add('hidden'); 
     activeId = null; 
+    popupImageIndex = 0;
     el('pp-comments-list').innerHTML = '';
     const input = el('pp-comment-input');
     if (input) input.value = '';
@@ -1366,26 +1456,36 @@ DM.map = (() => {
 
   // ── USER MANAGEMENT ──────────────────────────────────────
   async function openUsers() {
+    const userLevel = user?.level ?? 0;
+    if (!user?.canManageUsers && userLevel < 8) {
+      toast('No permission');
+      return;
+    }
+
     el('user-modal').classList.remove('hidden');
     updateUserModalTabVisibility();
-    await refreshUsers();
+    if (user.canManageUsers) await refreshUsers();
     updateUserModalTabVisibility();
-    switchUserModalTab('users');
+    switchUserModalTab(user.canManageUsers ? 'users' : 'audit');
   }
 
   function updateUserModalTabVisibility() {
+    const usersTab = el('tab-users');
     const auditTab = el('tab-audit');
     const bugsTab = el('tab-bugs');
     const userLevel = user?.level ?? 0;
+    const canViewAdmin = userLevel >= 8 && !user?.canManageUsers;
+
+    if (usersTab) {
+      usersTab.style.display = user?.canManageUsers ? 'block' : 'none';
+    }
 
     if (auditTab) {
-      const shouldShowAudit = userLevel === 11;
-      auditTab.style.display = shouldShowAudit ? 'block' : 'none';
+      auditTab.style.display = canViewAdmin ? 'block' : 'none';
     }
 
     if (bugsTab) {
-      const shouldShowBugs = !!user;
-      bugsTab.style.display = shouldShowBugs ? 'block' : 'none';
+      bugsTab.style.display = canViewAdmin ? 'block' : 'none';
     }
   }
 
@@ -1409,14 +1509,19 @@ DM.map = (() => {
     if (bugsTab) bugsTab.style.borderBottom = '2px solid transparent';
 
     if (tab === 'users') {
+      if (!user?.canManageUsers) {
+        toast('Boss only — user management restricted');
+        if ((user?.level ?? 0) >= 8) switchUserModalTab('audit');
+        return;
+      }
       usersContent.style.display = 'block';
       if (usersTab) usersTab.style.borderBottom = '2px solid var(--tan)';
     } 
     else if (tab === 'audit') {
       const userLevel = user?.level ?? 0;
-      if (userLevel !== 11) {
-        toast('Only the Boss can view the Audit Log');
-        switchUserModalTab('users');
+      if (userLevel < 8 || user?.canManageUsers) {
+        toast('Chief+ required to view the Audit Log');
+        if (user?.canManageUsers) switchUserModalTab('users');
         return;
       }
       auditContent.style.display = 'block';
@@ -1424,6 +1529,12 @@ DM.map = (() => {
       loadAuditLogIntoTab();
     } 
     else if (tab === 'bugs') {
+      const userLevel = user?.level ?? 0;
+      if (userLevel < 8 || user?.canManageUsers) {
+        toast('Chief+ required to view Bug Reports');
+        if (user?.canManageUsers) switchUserModalTab('users');
+        return;
+      }
       bugsContent.style.display = 'block';
       if (bugsTab) bugsTab.style.borderBottom = '2px solid #e07070';
       loadBugReports();
@@ -1581,8 +1692,7 @@ DM.map = (() => {
         userLevel: user ? user.level : null
       });
       toast('Bug report sent. Thank you.');
-      // Optionally open the bugs tab for leaders
-      if (user && user.level === 11) {
+      if (user && user.level >= 8 && !user.canManageUsers) {
         setTimeout(() => { openUsers(); switchUserModalTab('bugs'); }, 400);
       }
     } else {
@@ -1596,7 +1706,7 @@ DM.map = (() => {
     const c = el('user-list');
     c.innerHTML = '<div style="padding:14px;font-family:var(--font-m);font-size:11px;letter-spacing:2px;color:var(--muted);">// LOADING...</div>';
     try {
-      const users = await DM.db.getUsers();
+      const users = await DM.db.getUsers(user);
       c.innerHTML = users.map(u => {
         return `<div class="urow">
           <div><div class="u-name">${u.display_name||u.username}</div><div class="u-un">@${u.username}</div></div>
@@ -1677,7 +1787,8 @@ DM.map = (() => {
 
   return {
     init, swapLayer, swapZone, togglePlace, onMapClick, onMouseMove,
-    closeAddModal, onImagePicked, removeImage, saveMarker,
+    closeAddModal, onImagePicked, removeImageAt, saveMarker,
+    renderPopupImages, setPopupImage, prevPopupImage, nextPopupImage,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,

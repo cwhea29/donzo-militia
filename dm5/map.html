@@ -132,19 +132,18 @@
 
       <!-- IMAGE UPLOAD -->
       <div class="img-upload-area">
-        <label>// Location Image (optional)</label>
-        <div class="img-preview" id="img-preview" onclick="document.getElementById('img-file').click()">
-          <div class="img-placeholder">Click to add a photo</div>
+        <label>// Location Images (optional)</label>
+        <div class="img-gallery" id="img-gallery" onclick="document.getElementById('img-file').click()">
+          <div class="img-placeholder">Click to add photos</div>
         </div>
         <div class="img-upload-row">
           <button type="button" class="img-pick-btn" onclick="document.getElementById('img-file').click()">
-            📁 Choose Image
+            📁 Choose Images
           </button>
-          <button type="button" class="img-remove-btn hidden" id="img-remove" onclick="DM.map.removeImage()">✕</button>
           <span id="img-upload-status"></span>
         </div>
-        <input type="file" id="img-file" accept="image/*" onchange="DM.map.onImagePicked(this)">
-        <div class="hint">// JPG, PNG, WEBP — max 8MB — uploads to cloud automatically</div>
+        <input type="file" id="img-file" accept="image/*" multiple onchange="DM.map.onImagePicked(this)">
+        <div class="hint">// JPG, PNG, WEBP — max 8MB each — up to 10 images</div>
       </div>
 
       <div class="fg">
@@ -253,7 +252,7 @@
         </button>
         <button id="tab-audit" onclick="DM.map.switchUserModalTab('audit')" 
                 style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; display: none;">
-          📜 Audit Log (Boss only)
+          📜 Audit Log
         </button>
         <button id="tab-bugs" onclick="DM.map.switchUserModalTab('bugs')" 
                 style="padding: 6px 12px; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; display: none;">

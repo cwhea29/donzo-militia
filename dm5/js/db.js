@@ -2,6 +2,25 @@
 
 DM.db = (() => {
 
+  const MAX_MARKER_IMAGES = 10;
+
+  function getMarkerImages(marker) {
+    if (Array.isArray(marker.image_urls) && marker.image_urls.length) {
+      return marker.image_urls.filter(Boolean);
+    }
+    if (marker.image_url) return [marker.image_url];
+    return [];
+  }
+
+  function normalizeMarker(marker) {
+    const image_urls = getMarkerImages(marker);
+    return { ...marker, image_urls, image_url: image_urls[0] || '' };
+  }
+
+  function assertManageUsers(actor) {
+    if (!actor?.canManageUsers) throw new Error('Boss only — user management restricted');
+  }
+
   // ── IMAGE UPLOAD ─────────────────────────────────────────
   // Uploads a File object to Supabase Storage.
   // Returns the public URL string, or throws on error.
@@ -41,7 +60,7 @@ DM.db = (() => {
       .select('*')
       .lte('min_access_level', user.level)
       .order('created_at', { ascending: false });
-    return data || [];
+    return (data || []).map(normalizeMarker);
   }
 
   async function deleteMarker(user, marker) {
@@ -55,7 +74,8 @@ DM.db = (() => {
 
   // ── USERS ────────────────────────────────────────────────
 
-  async function getUsers() {
+  async function getUsers(actor) {
+    assertManageUsers(actor);
     const { data, error } = await dmDB
       .from('users')
       .select('id, username, display_name, access_level')
@@ -65,7 +85,7 @@ DM.db = (() => {
   }
 
   async function addUser(actor, u) {
-    if (actor.level < 4) throw new Error('Commanders only');
+    assertManageUsers(actor);
     const { data: ex } = await dmDB.from('users').select('id').eq('username', u.username.toLowerCase()).limit(1);
     if (ex && ex.length) throw new Error('Username already taken');
     const { error } = await dmDB.from('users').insert({
@@ -79,13 +99,13 @@ DM.db = (() => {
   }
 
   async function updateLevel(actor, userId, level) {
-    if (actor.level < 4) throw new Error('Commanders only');
+    assertManageUsers(actor);
     const { error } = await dmDB.from('users').update({ access_level: parseInt(level) }).eq('id', userId);
     if (error) throw new Error(error.message);
   }
 
   async function deleteUser(actor, userId) {
-    if (actor.level < 4) throw new Error('Commanders only');
+    assertManageUsers(actor);
     const { error } = await dmDB.from('users').delete().eq('id', userId);
     if (error) throw new Error(error.message);
   }
@@ -277,10 +297,13 @@ DM.db = (() => {
       throw new Error('No permission to edit this location');
     }
 
+    const imageUrls = (m.imageUrls || []).filter(Boolean).slice(0, MAX_MARKER_IMAGES);
+
     const { error } = await dmDB.from('markers').update({
       name:             m.name,
       description:      m.description    || '',
-      image_url:        m.imageUrl       || '',
+      image_url:        imageUrls[0]     || '',
+      image_urls:       imageUrls,
       category:         m.category       || 'poi',
       min_access_level: parseInt(m.minLevel) || 1,
     }).eq('id', markerId);
@@ -301,10 +324,13 @@ DM.db = (() => {
   async function addMarker(user, m) {
     if (!user.canAdd) throw new Error('Insufficient access level');
 
+    const imageUrls = (m.imageUrls || []).filter(Boolean).slice(0, MAX_MARKER_IMAGES);
+
     const { data, error } = await dmDB.from('markers').insert({
       name:             m.name,
       description:      m.description    || '',
-      image_url:        m.imageUrl       || '',
+      image_url:        imageUrls[0]     || '',
+      image_urls:       imageUrls,
       category:         m.category       || 'poi',
       zone:             m.zone,
       x:                m.x,
@@ -354,7 +380,9 @@ DM.db = (() => {
   }
 
   return { 
-    uploadImage, 
+    uploadImage,
+    getMarkerImages,
+    MAX_MARKER_IMAGES,
     listenMarkers, 
     addMarker, 
     deleteMarker, 

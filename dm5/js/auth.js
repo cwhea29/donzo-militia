@@ -3,8 +3,26 @@
 DM.auth = (() => {
   const KEY = 'dm_sess';
 
-  function get()  { try { return JSON.parse(sessionStorage.getItem(KEY)); } catch { return null; } }
-  function set(u) { sessionStorage.setItem(KEY, JSON.stringify(u)); }
+  function hydrate(u) {
+    if (!u) return null;
+    const info = ACCESS[u.level] || ACCESS[1];
+    u.canAdd = info.add;
+    u.canDelOwn = info.delOwn;
+    u.canDelAll = info.delAll;
+    u.canManageUsers = !!info.manageUsers;
+    u.levelName = info.name;
+    u.color = info.color;
+    u.bg = info.bg;
+    return u;
+  }
+
+  function get()  {
+    try {
+      const u = JSON.parse(sessionStorage.getItem(KEY));
+      return hydrate(u);
+    } catch { return null; }
+  }
+  function set(u) { sessionStorage.setItem(KEY, JSON.stringify(hydrate(u))); }
   function clear(){ sessionStorage.removeItem(KEY); }
 
   async function login(username, password) {
@@ -40,7 +58,8 @@ DM.auth = (() => {
         id: data.id, username: data.username,
         display: data.display_name || data.username,
         level: lvl, levelName: info.name, color: info.color, bg: info.bg,
-        canAdd: info.add, canDelOwn: info.delOwn, canDelAll: info.delAll
+        canAdd: info.add, canDelOwn: info.delOwn, canDelAll: info.delAll,
+        canManageUsers: !!info.manageUsers
       };
       set(user);
       return { ok: true, user };

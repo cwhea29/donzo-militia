@@ -52,6 +52,7 @@ CREATE TABLE public.markers (
     name             TEXT NOT NULL,
     description      TEXT NOT NULL DEFAULT '',
     image_url        TEXT NOT NULL DEFAULT '',
+    image_urls       JSONB NOT NULL DEFAULT '[]'::jsonb,
     category         TEXT NOT NULL DEFAULT 'poi',
     zone             TEXT NOT NULL
                      CHECK (zone IN ('mainland', 'cayo')),
