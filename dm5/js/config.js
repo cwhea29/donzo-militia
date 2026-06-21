@@ -21,7 +21,7 @@ const ACCESS = {
   8:  { name:'Chief',      color:'#a05a2a', bg:'rgba(160,90,42,0.15)',   add:true,  delOwn:true,  delAll:true,  manageUsers:false },
   9:  { name:'Warboss',    color:'#8a3a3a', bg:'rgba(138,58,58,0.15)',   add:true,  delOwn:true,  delAll:true,  manageUsers:false },
   10: { name:'Underboss',  color:'#6a2a5a', bg:'rgba(106,42,90,0.15)',   add:true,  delOwn:true,  delAll:true,  manageUsers:false },
-  11: { name:'Boss',       color:'#c0392b', bg:'rgba(192,57,43,0.15)',   add:false, delOwn:false, delAll:false, manageUsers:true  }
+  11: { name:'Boss',       color:'#c0392b', bg:'rgba(192,57,43,0.15)',   add:true,  delOwn:true,  delAll:true,  manageUsers:true  }
 };
 
 const VIS = {
