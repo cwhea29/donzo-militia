@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#9a8456">
+<title>Donzo — My Account</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/DM_2.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pg">
+<div class="pc">
+
+  <div class="ph">
+    <div class="ph-main">
+      <div class="pt">My Account</div>
+      <div class="ps">View your profile details and update your password.</div>
+    </div>
+    <div class="pv">ACCOUNT</div>
+  </div>
+
+  <div class="psec">
+    <div class="account-grid">
+
+      <div class="account-card">
+        <div class="account-card-title">Profile</div>
+
+        <div class="account-field">
+          <label>Username</label>
+          <div class="account-readonly" id="acct-username">—</div>
+        </div>
+
+        <div class="account-field">
+          <label>Display Name</label>
+          <input type="text" id="acct-display" maxlength="40" placeholder="How you appear on the map">
+        </div>
+
+        <div class="account-field">
+          <label>Clearance Level</label>
+          <div class="account-readonly" id="acct-level">—</div>
+        </div>
+
+        <div class="account-field">
+          <label>Registered</label>
+          <div class="account-readonly muted" id="acct-registered">—</div>
+        </div>
+
+        <div class="account-field">
+          <label>Added By</label>
+          <div class="account-readonly muted" id="acct-created-by">—</div>
+        </div>
+
+        <div class="account-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="acct-save-display-btn" onclick="DM.account.saveDisplayName()">Save Display Name</button>
+        </div>
+        <div class="account-status" id="acct-profile-status"></div>
+      </div>
+
+      <div class="account-card">
+        <div class="account-card-title">Change Password</div>
+
+        <div class="account-field">
+          <label>Current Password</label>
+          <input type="password" id="acct-current-pw" autocomplete="current-password" placeholder="Enter current password">
+        </div>
+
+        <div class="account-field">
+          <label>New Password</label>
+          <input type="password" id="acct-new-pw" autocomplete="new-password" placeholder="At least 4 characters">
+        </div>
+
+        <div class="account-field">
+          <label>Confirm New Password</label>
+          <input type="password" id="acct-confirm-pw" autocomplete="new-password" placeholder="Re-enter new password">
+        </div>
+
+        <div class="account-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="acct-save-pw-btn" onclick="DM.account.changePassword()">Update Password</button>
+        </div>
+        <div class="account-status" id="acct-pw-status"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="account-toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+<script src="js/account.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  initDB();
+  DM.nav.init();
+  DM.account.init();
+</script>
+</body>
+</html>

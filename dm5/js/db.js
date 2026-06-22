@@ -110,6 +110,55 @@ DM.db = (() => {
     if (error) throw new Error(error.message);
   }
 
+  async function getOwnProfile(user) {
+    if (!user?.id) throw new Error('Not signed in');
+    const { data, error } = await dmDB
+      .from('users')
+      .select('id, username, display_name, access_level, created_at, created_by')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Account not found');
+    return data;
+  }
+
+  async function updateOwnDisplayName(user, displayName) {
+    if (!user?.id) throw new Error('Not signed in');
+    const name = (displayName || '').trim();
+    if (!name) throw new Error('Display name is required');
+    if (name.length > 40) throw new Error('Display name too long (max 40 chars)');
+
+    const { error } = await dmDB
+      .from('users')
+      .update({ display_name: name })
+      .eq('id', user.id);
+    if (error) throw new Error(error.message);
+  }
+
+  async function updateOwnPassword(user, currentPassword, newPassword) {
+    if (!user?.id) throw new Error('Not signed in');
+
+    const current = (currentPassword || '').trim();
+    const next = (newPassword || '').trim();
+    if (!current || !next) throw new Error('Current and new password are required');
+    if (next.length < 4) throw new Error('New password must be at least 4 characters');
+
+    const { data, error } = await dmDB
+      .from('users')
+      .select('password')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('Account not found');
+    if (data.password !== current) throw new Error('Current password is incorrect');
+
+    const { error: updateError } = await dmDB
+      .from('users')
+      .update({ password: next })
+      .eq('id', user.id);
+    if (updateError) throw new Error(updateError.message);
+  }
+
   // ── COMMENTS ────────────────────────────────────────────
   async function getComments(markerId) {
     const { data, error } = await dmDB
@@ -394,10 +443,13 @@ DM.db = (() => {
     addMarker, 
     deleteMarker, 
     updateMarker, 
-    getUsers, 
-    addUser, 
-    updateLevel, 
+    getUsers,
+    addUser,
+    updateLevel,
     deleteUser,
+    getOwnProfile,
+    updateOwnDisplayName,
+    updateOwnPassword,
     // New features
     getComments,
     addComment,

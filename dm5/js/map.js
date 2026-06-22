@@ -898,6 +898,10 @@ DM.map = (() => {
     popupImageIndex = 0;
     renderPopupImages(m);
 
+    const fsBtn = el('pp-fullscreen-btn');
+    const hasImages = DM.db.getMarkerImages(m).length > 0;
+    if (fsBtn) fsBtn.classList.toggle('hidden', !hasImages);
+
     const canManage = DM.auth.canDelete(m, user);
 
     const foot = el('pp-foot');
@@ -981,9 +985,70 @@ DM.map = (() => {
     renderPopupImages(m);
   }
 
-  function closePopup() { 
-    el('popup').classList.add('hidden'); 
-    activeId = null; 
+  function getActiveMarkerImages() {
+    if (!activeId) return [];
+    const m = markers.find(x => x.id === activeId);
+    return m ? DM.db.getMarkerImages(m) : [];
+  }
+
+  function renderFullscreenImage() {
+    const images = getActiveMarkerImages();
+    const overlay = el('img-fullscreen');
+    const img = el('img-fullscreen-img');
+    const prev = el('img-fs-prev');
+    const next = el('img-fs-next');
+    const countEl = el('img-fullscreen-count');
+    if (!images.length || !overlay || !img) return;
+
+    const idx = Math.max(0, Math.min(popupImageIndex, images.length - 1));
+    popupImageIndex = idx;
+    img.src = images[idx];
+    img.alt = el('pp-name')?.textContent || 'Location image';
+
+    const multi = images.length > 1;
+    if (prev) prev.classList.toggle('hidden', !multi);
+    if (next) next.classList.toggle('hidden', !multi);
+    if (countEl) {
+      countEl.classList.toggle('hidden', !multi);
+      countEl.textContent = `${idx + 1} / ${images.length}`;
+    }
+  }
+
+  function openImageFullscreen() {
+    const images = getActiveMarkerImages();
+    if (!images.length) return;
+    renderFullscreenImage();
+    el('img-fullscreen')?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeImageFullscreen() {
+    el('img-fullscreen')?.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function prevFullscreenImage() {
+    const images = getActiveMarkerImages();
+    if (!images.length) return;
+    popupImageIndex = (popupImageIndex - 1 + images.length) % images.length;
+    renderFullscreenImage();
+    const m = markers.find(x => x.id === activeId);
+    if (m) renderPopupImages(m);
+  }
+
+  function nextFullscreenImage() {
+    const images = getActiveMarkerImages();
+    if (!images.length) return;
+    popupImageIndex = (popupImageIndex + 1) % images.length;
+    renderFullscreenImage();
+    const m = markers.find(x => x.id === activeId);
+    if (m) renderPopupImages(m);
+  }
+
+  function closePopup() {
+    closeImageFullscreen();
+    el('popup').classList.add('hidden');
+    activeId = null;
     popupImageIndex = 0;
     el('pp-comments-list').innerHTML = '';
     const input = el('pp-comment-input');
@@ -1974,10 +2039,12 @@ DM.map = (() => {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      const fs = el('img-fullscreen');
       const addM = el('add-modal');
       const userM = el('user-modal');
       const pop = el('popup');
-      if (moving) cancelMoving();
+      if (fs && !fs.classList.contains('hidden')) closeImageFullscreen();
+      else if (moving) cancelMoving();
       else if (!addM.classList.contains('hidden')) closeAddModal();
       else if (!userM.classList.contains('hidden')) closeUsers();
       else if (!pop.classList.contains('hidden')) closePopup();
@@ -1998,6 +2065,7 @@ DM.map = (() => {
     init, swapLayer, swapZone, togglePlace, onMapClick, onMouseMove,
     closeAddModal, startMoveLocation, cancelMoving, onImagePicked, removeImageAt, saveMarker,
     renderPopupImages, setPopupImage, prevPopupImage, nextPopupImage,
+    openImageFullscreen, closeImageFullscreen, prevFullscreenImage, nextFullscreenImage,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,
     useFallbackMap, addCommentToMarker, editComment, saveEditedComment, cancelEditComment, deleteComment, renderMarkers, renderCategoryFilters, showCreateGroupModal, renderGroupFilters, loadGroups,

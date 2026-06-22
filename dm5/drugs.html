@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#9a8456">
+<title>Donzo — Drug Guide</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/DM_2.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pg">
+<div class="pc">
+
+  <div class="ph">
+    <div class="ph-main">
+      <div class="pt">Drug Guide</div>
+      <div class="ps">Step-by-step production guides for in-field operations — coming soon.</div>
+    </div>
+    <div class="pv">WIP</div>
+  </div>
+
+  <div class="psec">
+    <div class="cs">
+      <div class="csttl">Work in progress</div>
+      <div class="cstxt">We're building out drug manufacturing walkthroughs — ingredients, stations, yields, and safety notes. This will sit alongside Crafting once the ops team finishes the write-up.</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  initDB();
+  DM.nav.init();
+</script>
+</body>
+</html>

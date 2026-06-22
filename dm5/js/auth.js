@@ -83,5 +83,13 @@ DM.auth = (() => {
   function canView(marker, user)   { return (marker.min_access_level || 1) <= user.level; }
   function canDelete(marker, user) { return user.canDelAll || (user.canDelOwn && marker.created_by === user.username); }
 
-  return { login, logout, require, get, canView, canDelete };
+  function updateSession(updates) {
+    const u = get();
+    if (!u) return null;
+    const merged = hydrate({ ...u, ...updates });
+    set(merged);
+    return merged;
+  }
+
+  return { login, logout, require, get, updateSession, canView, canDelete };
 })();

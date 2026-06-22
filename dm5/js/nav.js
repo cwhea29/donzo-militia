@@ -3,7 +3,8 @@ DM.nav = (() => {
   const BASE_PAGES = [
     { href:'map.html',          label:'MAP',       icon:'🗺️' },
     { href:'instructions.html', label:'MAP GUIDE', icon:'📖' },
-    { href:'crafting.html',     label:'CRAFTING',  icon:'⚙️'  }
+    { href:'crafting.html',     label:'CRAFTING',  icon:'⚙️'  },
+    { href:'drugs.html',        label:'DRUGS',     icon:'💊'  }
   ];
 
   function getPages(user) {
@@ -41,10 +42,12 @@ DM.nav = (() => {
           <span class="nav-badge" style="color:${lvl.color};border-color:${lvl.color};background:${lvl.bg}">
             LVL ${user.level} — ${lvl.name}
           </span>
-          <div class="nav-uinfo">
-            <span class="nav-name">${user.display}</span>
-            <span class="nav-uname">@${user.username}</span>
-          </div>
+          <a href="account.html" class="nav-account${cur==='account.html'?' active':''}" title="My account">
+            <div class="nav-uinfo">
+              <span class="nav-name">${user.display}</span>
+              <span class="nav-uname">@${user.username}</span>
+            </div>
+          </a>
           <button class="nav-logout" onclick="DM.auth.logout()">LOGOUT</button>
         </div>
         <button class="nav-burger" onclick="document.getElementById('nav-drawer').classList.toggle('open')">☰</button>
@@ -52,6 +55,7 @@ DM.nav = (() => {
       <div class="nav-drawer" id="nav-drawer">
         ${pages.map(p=>`<a href="${p.href}" onclick="document.getElementById('nav-drawer').classList.remove('open')">${p.icon} ${p.label}</a>`).join('')}
         ${user.level >= 8 && !user.canManageUsers ? `<a href="#" onclick="DM.map.openBugsFromNav(); document.getElementById('nav-drawer').classList.remove('open'); return false;">🐛 BUGS</a>` : ''}
+        <a href="account.html" onclick="document.getElementById('nav-drawer').classList.remove('open')">👤 MY ACCOUNT</a>
         <div class="nav-drawer-foot">
           <span class="nav-badge" style="color:${lvl.color};border-color:${lvl.color};background:${lvl.bg}">LVL ${user.level} — ${lvl.name}</span>
           <button class="nav-logout" onclick="DM.auth.logout()">LOGOUT</button>

@@ -226,6 +226,7 @@
   <div class="popup-body">
     <div class="popup-name" id="pp-name"></div>
     <div class="popup-desc" id="pp-desc"></div>
+    <button type="button" class="popup-fullscreen-btn hidden" id="pp-fullscreen-btn" onclick="DM.map.openImageFullscreen()">⛶ View image full screen</button>
     <div class="popup-tags">
       <span class="popup-tag" id="pp-cat"></span>
       <span id="pp-vis"></span>
@@ -349,6 +350,15 @@
 </div>
 
 
+
+<!-- FULLSCREEN IMAGE VIEWER -->
+<div class="img-fullscreen hidden" id="img-fullscreen" onclick="DM.map.closeImageFullscreen()">
+  <button type="button" class="img-fullscreen-x" onclick="event.stopPropagation(); DM.map.closeImageFullscreen()">✕</button>
+  <button type="button" class="img-fullscreen-nav prev hidden" id="img-fs-prev" onclick="event.stopPropagation(); DM.map.prevFullscreenImage()">‹</button>
+  <img id="img-fullscreen-img" src="" alt="" onclick="event.stopPropagation()">
+  <button type="button" class="img-fullscreen-nav next hidden" id="img-fs-next" onclick="event.stopPropagation(); DM.map.nextFullscreenImage()">›</button>
+  <div class="img-fullscreen-count hidden" id="img-fullscreen-count"></div>
+</div>
 
 <div class="toast" id="toast"></div>
 
