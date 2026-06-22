@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#9a8456">
+<title>Donzo — Audit Log</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/DM_2.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pg">
+<div class="pc">
+
+  <div class="ph">
+    <div class="ph-main">
+      <div class="pt">Audit Log</div>
+      <div class="ps">Boss-only record of marker creates, updates, deletes, and comments across the ops map.</div>
+    </div>
+    <div class="pv">BOSS ONLY</div>
+  </div>
+
+  <div class="psec">
+    <div class="audit-toolbar">
+      <div class="audit-toolbar-meta">
+        <span class="badge l11">Level 11 — Boss</span>
+        <span class="audit-count" id="audit-log-count">—</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="audit-refresh-btn" type="button" onclick="DM.audit.load()">↻ Refresh</button>
+    </div>
+    <div id="audit-log-wrap">
+      <div class="audit-loading">// LOADING AUDIT LOG...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+<script src="js/audit.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  initDB();
+  DM.nav.init();
+  DM.audit.init();
+</script>
+</body>
+</html>

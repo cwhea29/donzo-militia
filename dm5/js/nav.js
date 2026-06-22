@@ -1,15 +1,24 @@
 /** DONZO — NAV */
 DM.nav = (() => {
-  const PAGES = [
+  const BASE_PAGES = [
     { href:'map.html',          label:'MAP',       icon:'🗺️' },
     { href:'instructions.html', label:'MAP GUIDE', icon:'📖' },
     { href:'crafting.html',     label:'CRAFTING',  icon:'⚙️'  }
   ];
 
+  function getPages(user) {
+    const pages = [...BASE_PAGES];
+    if (user.level >= 11) {
+      pages.push({ href:'audit-log.html', label:'AUDIT LOG', icon:'📜' });
+    }
+    return pages;
+  }
+
   function init() {
     const user = DM.auth.require();
     if (!user) return null;
 
+    const pages = getPages(user);
     const cur = location.pathname.split('/').pop() || 'map.html';
     const lvl = ACCESS[user.level] || {};
 
@@ -25,8 +34,7 @@ DM.nav = (() => {
           </div>
         </div>
         <div class="nav-links">
-          ${PAGES.map(p=>`<a href="${p.href}" class="nav-link${cur===p.href?' active':''}">${p.icon} ${p.label}</a>`).join('')}
-          ${user.level >= 8 && !user.canManageUsers ? `<a href="#" onclick="DM.map.openAuditLogFromNav(); return false;" class="nav-link">📜 AUDIT LOG</a>` : ''}
+          ${pages.map(p=>`<a href="${p.href}" class="nav-link${cur===p.href?' active':''}">${p.icon} ${p.label}</a>`).join('')}
           ${user.level >= 8 && !user.canManageUsers ? `<a href="#" onclick="DM.map.openBugsFromNav(); return false;" class="nav-link">🐛 BUGS</a>` : ''}
         </div>
         <div class="nav-right">
@@ -42,8 +50,7 @@ DM.nav = (() => {
         <button class="nav-burger" onclick="document.getElementById('nav-drawer').classList.toggle('open')">☰</button>
       </nav>
       <div class="nav-drawer" id="nav-drawer">
-        ${PAGES.map(p=>`<a href="${p.href}" onclick="document.getElementById('nav-drawer').classList.remove('open')">${p.icon} ${p.label}</a>`).join('')}
-        ${user.level >= 8 && !user.canManageUsers ? `<a href="#" onclick="DM.map.openAuditLogFromNav(); document.getElementById('nav-drawer').classList.remove('open'); return false;">📜 AUDIT LOG</a>` : ''}
+        ${pages.map(p=>`<a href="${p.href}" onclick="document.getElementById('nav-drawer').classList.remove('open')">${p.icon} ${p.label}</a>`).join('')}
         ${user.level >= 8 && !user.canManageUsers ? `<a href="#" onclick="DM.map.openBugsFromNav(); document.getElementById('nav-drawer').classList.remove('open'); return false;">🐛 BUGS</a>` : ''}
         <div class="nav-drawer-foot">
           <span class="nav-badge" style="color:${lvl.color};border-color:${lvl.color};background:${lvl.bg}">LVL ${user.level} — ${lvl.name}</span>
