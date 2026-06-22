@@ -299,25 +299,32 @@ DM.db = (() => {
 
     const imageUrls = (m.imageUrls || []).filter(Boolean).slice(0, MAX_MARKER_IMAGES);
 
-    const { error } = await dmDB.from('markers').update({
+    const updatePayload = {
       name:             m.name,
       description:      m.description    || '',
       image_url:        imageUrls[0]     || '',
       image_urls:       imageUrls,
       category:         m.category       || 'poi',
       min_access_level: parseInt(m.minLevel) || 1,
-    }).eq('id', markerId);
+    };
+    if (m.x !== undefined && m.y !== undefined) {
+      updatePayload.x = m.x;
+      updatePayload.y = m.y;
+    }
+
+    const { error } = await dmDB.from('markers').update(updatePayload).eq('id', markerId);
 
     if (error) {
       console.error('Supabase markers update failed:', error);
       throw new Error(error.message || 'Update failed');
     }
 
-    // Log audit
-    await logAudit(markerId, 'update', user.username, {
-      name: m.name,
-      category: m.category
-    });
+    const auditDetails = { name: m.name, category: m.category };
+    if (m.x !== undefined && m.y !== undefined) {
+      auditDetails.x = m.x;
+      auditDetails.y = m.y;
+    }
+    await logAudit(markerId, 'update', user.username, auditDetails);
   }
 
   // ── ENHANCED ADD (with audit) ────────────────────────────

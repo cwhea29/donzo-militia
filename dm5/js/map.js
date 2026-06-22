@@ -1,7 +1,7 @@
 /** DONZO — MAP MODULE */
 DM.map = (() => {
   let user, markers = [], activeId = null;
-  let curMap = 'satellite', curZone = 'mainland', placing = false, pending = null;
+  let curMap = 'satellite', curZone = 'mainland', placing = false, moving = false, pending = null;
   let scale = 1, px = 0, py = 0;
   const MIN_ZOOM = 0.4;
   const MAX_ZOOM = 12;
@@ -239,7 +239,7 @@ DM.map = (() => {
     }, { passive: false });
 
     wrap.addEventListener('mousedown', e => {
-      if (e.button === 0 && placing) {
+      if (e.button === 0 && (placing || moving)) {
         moved = false;
         return;
       }
@@ -258,7 +258,7 @@ DM.map = (() => {
       panning = false;
       moved = false;
       const w = el('map-area');
-      if (w) w.style.cursor = placing ? 'crosshair' : 'default';
+      if (w) w.style.cursor = (placing || moving) ? 'crosshair' : 'default';
     });
 
     // ── TOUCH: single finger pan + two finger pinch zoom ─────────────────
@@ -269,7 +269,7 @@ DM.map = (() => {
     wrap.addEventListener('touchstart', e => {
       activeTouches = e.touches.length;
       if (activeTouches === 1) {
-        if (placing) return;
+        if (placing || moving) return;
         panning = true; moved = false;
         touchStartX = e.touches[0].clientX - px;
         touchStartY = e.touches[0].clientY - py;
@@ -312,7 +312,7 @@ DM.map = (() => {
       if (activeTouches === 0) {
         panning = false;
         const w = el('map-area');
-        if (w) w.style.cursor = placing ? 'crosshair' : 'default';
+        if (w) w.style.cursor = (placing || moving) ? 'crosshair' : 'default';
       } else if (activeTouches === 1) {
         touchStartX = e.touches[0].clientX - px;
         touchStartY = e.touches[0].clientY - py;
@@ -433,6 +433,22 @@ DM.map = (() => {
   // ── CLICK HANDLER ─────────────────────────────────────────
   function onMapClick(e) {
     if (isZoneWip(curZone)) return;
+
+    if (moving && !moved) {
+      if (!isMapImageReady()) {
+        toast('Map still loading — wait a moment and try again');
+        return;
+      }
+      const frac = getImageFraction(e.clientX, e.clientY);
+      if (!frac) {
+        toast('Could not read map position — try again');
+        return;
+      }
+      pending = frac;
+      finishMoving();
+      return;
+    }
+
     if (!placing || !user.canAdd || moved) {
       if (placing && moved) console.log('[Map] Click blocked because moved flag was true');
       return;
@@ -454,7 +470,7 @@ DM.map = (() => {
   }
 
   function onMouseMove(e) {
-    if (!placing) return;
+    if (!placing && !moving) return;
     const f = getImageFraction(e.clientX, e.clientY);
     if (!f) {
       el('coords').textContent = 'X: — / Y: —';
@@ -511,6 +527,20 @@ DM.map = (() => {
   }
 
   // ── ADD / EDIT MODAL ─────────────────────────────────────
+  function updateEditPositionDisplay() {
+    const row = el('m-position-row');
+    const display = el('m-coords-display');
+    if (!row || !display || !editingMarkerId) return;
+
+    const m = markers.find(x => x.id === editingMarkerId);
+    if (!m) return;
+
+    const x = pending?.x ?? m.x;
+    const y = pending?.y ?? m.y;
+    const positionChanged = pending && (pending.x !== m.x || pending.y !== m.y);
+    display.textContent = `X: ${(x * 100).toFixed(1)}%  Y: ${(y * 100).toFixed(1)}%${positionChanged ? ' (updated)' : ''}`;
+  }
+
   function openAddModal(markerToEdit = null) {
     editingMarkerId = markerToEdit ? markerToEdit.id : null;
 
@@ -524,6 +554,8 @@ DM.map = (() => {
 
       el('save-btn').textContent = 'UPDATE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'EDIT LOCATION';
+      el('m-position-row')?.classList.remove('hidden');
+      updateEditPositionDisplay();
     } else {
       el('m-name').value = '';
       el('m-desc').value = '';
@@ -533,6 +565,7 @@ DM.map = (() => {
       renderImageGallery();
       el('save-btn').textContent = 'SAVE LOCATION';
       el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
+      el('m-position-row')?.classList.add('hidden');
     }
 
     loadGroupSelectionForModal(markerToEdit ? markerToEdit.id : null);
@@ -541,7 +574,83 @@ DM.map = (() => {
     el('m-name').focus();
   }
 
+  function resetMoveUI() {
+    moving = false;
+    const area = el('map-area');
+    if (area) area.style.cursor = 'default';
+    const sdot = el('sdot');
+    if (sdot) sdot.className = 'sdot';
+    const smode = el('smode');
+    if (smode) smode.textContent = 'VIEW MODE';
+  }
+
+  function centerOnMarker(m) {
+    const box = getImageDisplayBox();
+    const r = el('map-area').getBoundingClientRect();
+    if (!box) return;
+    const layerPos = fractionToLayerPercent(m.x, m.y);
+    const localX = (layerPos.x / 100) * box.layerW;
+    const localY = (layerPos.y / 100) * box.layerH;
+    px = r.width / 2 - localX * scale;
+    py = r.height / 2 - localY * scale;
+    applyT();
+  }
+
+  function startMoveLocation() {
+    if (!editingMarkerId) return;
+    const m = markers.find(x => x.id === editingMarkerId);
+    if (!m) return;
+
+    if (placing) cancelPlacing();
+
+    if (isZoneWip(m.zone)) {
+      toast('Cannot move locations in work-in-progress zones');
+      return;
+    }
+
+    if (!isMapImageReady()) {
+      toast('Map still loading — wait for the image before moving');
+      return;
+    }
+
+    const beginMove = () => {
+      el('add-modal').classList.add('hidden');
+      moving = true;
+      moved = false;
+      resetView();
+      centerOnMarker(m);
+      el('map-area').style.cursor = 'crosshair';
+      el('sdot').className = 'sdot placing';
+      el('smode').textContent = 'MOVING LOCATION (1:1)';
+      toast('VIEW RESET TO 1:1 — Click the new position on the map');
+    };
+
+    if (m.zone !== curZone) {
+      swapZone(m.zone, document.querySelector(`.ztab[data-z="${m.zone}"]`));
+      setTimeout(beginMove, 400);
+    } else {
+      beginMove();
+    }
+  }
+
+  function finishMoving() {
+    resetMoveUI();
+    updateEditPositionDisplay();
+    el('add-modal').classList.remove('hidden');
+    toast('✓ Position updated — save to apply');
+  }
+
+  function cancelMoving(reopenModal = true) {
+    if (!moving) return;
+    resetMoveUI();
+    if (reopenModal) {
+      el('add-modal').classList.remove('hidden');
+      toast('Move cancelled');
+    }
+  }
+
   function closeAddModal() {
+    cancelMoving(false);
     el('add-modal').classList.add('hidden');
     pending = null;
     pendingImageUrls = [];
@@ -549,6 +658,7 @@ DM.map = (() => {
     editingMarkerId = null;
     el('save-btn').textContent = 'SAVE LOCATION';
     el('add-modal').querySelector('.modal-title').textContent = 'NEW LOCATION';
+    el('m-position-row')?.classList.add('hidden');
   }
 
   function renderImageGallery() {
@@ -660,15 +770,21 @@ DM.map = (() => {
       let savedMarkerId = editingMarkerId;
 
       if (editingMarkerId) {
-        await DM.db.updateMarker(user, editingMarkerId, {
+        const existing = markers.find(x => x.id === editingMarkerId);
+        const updateData = {
           name,
           description: el('m-desc').value.trim(),
           imageUrls:   [...pendingImageUrls],
           category:    el('m-cat').value,
           minLevel:    el('m-vis').value,
-          created_by:  markers.find(x => x.id === editingMarkerId)?.created_by
-        });
-        toast('✓ LOCATION UPDATED');
+          created_by:  existing?.created_by
+        };
+        if (pending) {
+          updateData.x = pending.x;
+          updateData.y = pending.y;
+        }
+        await DM.db.updateMarker(user, editingMarkerId, updateData);
+        toast(pending ? '✓ LOCATION UPDATED (position moved)' : '✓ LOCATION UPDATED');
       } else {
         const newMarker = await DM.db.addMarker(user, {
           name,
@@ -1470,6 +1586,7 @@ DM.map = (() => {
     const m = markers.find(x => x.id === id);
     if (!m) return;
     closePopup();
+    pending = null;
     openAddModal(m);
   }
 
@@ -1860,7 +1977,8 @@ DM.map = (() => {
       const addM = el('add-modal');
       const userM = el('user-modal');
       const pop = el('popup');
-      if (!addM.classList.contains('hidden')) closeAddModal();
+      if (moving) cancelMoving();
+      else if (!addM.classList.contains('hidden')) closeAddModal();
       else if (!userM.classList.contains('hidden')) closeUsers();
       else if (!pop.classList.contains('hidden')) closePopup();
       else if (placing) togglePlace();
@@ -1878,7 +1996,7 @@ DM.map = (() => {
 
   return {
     init, swapLayer, swapZone, togglePlace, onMapClick, onMouseMove,
-    closeAddModal, onImagePicked, removeImageAt, saveMarker,
+    closeAddModal, startMoveLocation, cancelMoving, onImagePicked, removeImageAt, saveMarker,
     renderPopupImages, setPopupImage, prevPopupImage, nextPopupImage,
     toggleSidebar, renderSidebar, jumpTo, closePopup,
     deleteMarker, editMarker, openUsers, closeUsers, addUser, changeLevel, removeUser, resetView,

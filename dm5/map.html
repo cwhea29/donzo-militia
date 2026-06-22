@@ -198,6 +198,15 @@
         <div class="hint">// Select which groups this location belongs to</div>
       </div>
 
+      <div class="fg hidden" id="m-position-row">
+        <label>// Map Position</label>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="m-coords-display" style="font-family:var(--font-m); font-size:11px; letter-spacing:1px; color:var(--muted);">X: — / Y: —</span>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="DM.map.startMoveLocation()">📍 Move on Map</button>
+        </div>
+        <div class="hint">// Reposition this marker by clicking a new spot on the map</div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="DM.map.closeAddModal()">Cancel</button>
