@@ -4,8 +4,8 @@
   "description": "GTA V roleplay operations map, crafting reference, and secure location database for Donzo.",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#080c07",
-  "theme_color": "#4e6443",
+  "background_color": "#0a0c09",
+  "theme_color": "#9a8456",
   "icons": [
     {
       "src": "images/DM_2.png",

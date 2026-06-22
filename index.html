@@ -4,32 +4,94 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Donzo — Operations</title>
+<link rel="stylesheet" href="dm5/css/style.css">
 <style>
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#0a0f0a; color:#d4c9a8; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
-  .wrap { max-width:720px; padding:40px 24px; text-align:center; }
-  h1 { font-size:42px; letter-spacing:4px; margin:0 0 8px; color:#b8a77a; }
-  .sub { font-size:13px; letter-spacing:3px; color:#7a7055; margin-bottom:28px; }
-  .btn { display:inline-block; background:#4e6443; color:#fff; padding:14px 32px; text-decoration:none; border-radius:3px; font-weight:600; letter-spacing:1px; margin:6px; }
-  .btn:hover { background:#6b7f5c; }
-  .meta { margin-top:40px; font-size:12px; color:#5a664f; }
-  code { background:#131a0f; padding:2px 6px; border-radius:2px; }
+  body.landing {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .landing-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 65% 22%, rgba(154,132,86,.08) 0%, transparent 55%),
+      radial-gradient(ellipse 45% 35% at 8% 78%, rgba(154,132,86,.04) 0%, transparent 50%);
+  }
+  .landing-wrap {
+    position: relative; z-index: 1;
+    max-width: 560px;
+    padding: 48px 32px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--tan);
+    background: var(--panel);
+    box-shadow: 0 24px 56px rgba(0,0,0,.4);
+    animation: boxIn .45s var(--ease-out);
+  }
+  .landing-org {
+    font-family: var(--font-h);
+    font-size: clamp(48px, 10vw, 64px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: .9;
+    margin-bottom: 6px;
+  }
+  .landing-tag {
+    font-family: var(--font-m);
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .landing-desc {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+    max-width: 44ch;
+  }
+  .landing-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 36px; }
+  .landing-actions .btn-primary { flex: 1; min-width: 180px; justify-content: center; }
+  .landing-actions .btn-ghost { flex: 1; min-width: 140px; justify-content: center; }
+  .landing-meta {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-m);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .landing-meta a { color: var(--tan-lt); }
+  .landing-meta code {
+    font-family: var(--font-m);
+    font-size: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    color: var(--tan-lt);
+  }
 </style>
 </head>
-<body>
-<div class="wrap">
-  <h1>DONZO</h1>
-  <div class="sub">OPERATIONS DATABASE • GTA V ROLEPLAY</div>
+<body class="landing">
+<div class="landing-bg"></div>
+<div class="landing-wrap">
+  <div class="landing-org">DONZO</div>
+  <div class="landing-tag">GTA V ROLEPLAY · OPS MAP</div>
 
-  <a class="btn" href="dm5/index.html">ENTER THE MAP (LOGIN)</a>
-  <a class="btn" href="dm5/map.html" style="background:#2a3a28">DIRECT TO MAP</a>
+  <p class="landing-desc">
+    A shared live map for Los Santos and Cayo Perico. Mark locations, tag groups, leave notes, and plan heists — visibility locked to your clearance level.
+  </p>
 
-  <div style="margin-top:32px; font-size:14px; line-height:1.6; color:#a89d7f;">
-    Shared live map for Los Santos &amp; Cayo Perico.<br>
-    Access-level restricted markers, comments, groups, and heist planning.
+  <div class="landing-actions">
+    <a class="btn btn-primary" href="dm5/index.html">Sign In</a>
+    <a class="btn btn-ghost" href="dm5/map.html">Open Map</a>
   </div>
 
-  <div class="meta">
-    All application files live in <code>/dm5/</code>. See <a href="README.md" style="color:#b8a77a">README.md</a> for setup, security notes, and deployment.
+  <div class="landing-meta">
+    App files live in <code>/dm5/</code>. Setup and deployment notes in <a href="README.md">README.md</a>.
   </div>
 </div>
 </body>

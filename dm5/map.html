@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#4e6443">
+<meta name="theme-color" content="#9a8456">
 <title>Donzo — Map</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="images/DM_2.png">
@@ -60,13 +60,13 @@
       <div id="marker-layer"></div>
     </div>
   </div>
-  <div id="zone-wip" class="zone-wip hidden">🚧 ROXWOOD — WORK IN PROGRESS</div>
+  <div id="zone-wip" class="zone-wip hidden">Roxwood — coming soon</div>
 
   <div id="no-img" class="hidden">
     <div class="no-img-content">
       <div class="no-img-ico">🗺️</div>
-      <div class="no-img-txt">// MAP LAYERS NOT LOADED</div>
-      <div class="no-img-sub">One or more map layers failed to load.<br>Markers, panning, zoom, and all features still work fully. You can force the stylized fallback below.</div>
+      <div class="no-img-txt">Map layers didn't load</div>
+      <div class="no-img-sub">One or more images failed — markers, pan, and zoom still work.<br>You can switch to the stylized fallback below.</div>
       <div class="no-img-actions">
         <button class="cbtn" onclick="DM.map.useFallbackMap()">USE STYLIZED FALLBACK</button>
         <a class="cbtn" href="instructions.html" style="text-decoration:none">VIEW SETUP GUIDE</a>
@@ -84,7 +84,7 @@
       📋 Heist Plans
     </button>
     <div class="sb-search">
-      <input type="text" placeholder="// Search locations..." oninput="DM.map.renderSidebar(this.value)">
+      <input type="text" placeholder="Search locations…" oninput="DM.map.renderSidebar(this.value)">
     </div>
 
     <!-- Category Filters -->

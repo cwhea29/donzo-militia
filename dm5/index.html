@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#4e6443">
+<meta name="theme-color" content="#9a8456">
 <title>Donzo — Login</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="images/DM_2.png">
@@ -11,33 +11,31 @@
 </head>
 <body class="login-page">
 <div class="login-bg"></div>
-<div class="corner tl"></div><div class="corner tr"></div>
-<div class="corner bl"></div><div class="corner br"></div>
 <div class="login-box">
   <div class="login-hdr">
     <img class="login-logo" src="images/DM_2.png" alt="Donzo" onerror="this.style.display='none'">
     <div>
       <div class="login-org">DONZO</div>
-      <div class="login-sub">Donzo Location Map</div>
+      <div class="login-sub">Ops map for Los Santos &amp; Cayo</div>
     </div>
   </div>
   <div class="login-body">
     <form onsubmit="event.preventDefault(); doLogin()">
-      <div class="fg"><label>// Username</label>
-        <input type="text" id="lu" placeholder="Enter username..." autocomplete="off" autocapitalize="none"></div>
-      <div class="fg"><label>// Password</label>
+      <div class="fg"><label>Callsign</label>
+        <input type="text" id="lu" placeholder="Your username" autocomplete="off" autocapitalize="none"></div>
+      <div class="fg"><label>Password</label>
         <div style="position:relative">
-          <input type="password" id="lp" placeholder="Enter password..." style="padding-right:44px">
+          <input type="password" id="lp" placeholder="Your password" style="padding-right:44px">
           <button type="button" id="pw-toggle" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:13px;padding:4px 8px;cursor:pointer" aria-label="Show password">👁</button>
         </div>
       </div>
-      <button type="submit" class="btn btn-primary" id="lbtn" style="width:100%">GAIN ACCESS</button>
+      <button type="submit" class="btn btn-primary" id="lbtn" style="width:100%">Sign In</button>
     </form>
     <div class="login-err" id="lerr"></div>
   </div>
   <div class="login-foot">
-    <span>// DONZO v3.0</span>
-    <span style="color:#5a664f">Secure ops only — plaintext credentials</span>
+    <span>v3.0</span>
+    <span>Crew access only</span>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -46,12 +44,10 @@
 <script>
   initDB();
 
-  // Safe check — only redirect if DM and auth are available
   if (window.DM && DM.auth && DM.auth.get()) {
     location.href = 'map.html';
   }
 
-  // Convenience: remember last username
   const lastUser = localStorage.getItem('dm_last_user');
   if (lastUser) document.getElementById('lu').value = lastUser;
 
@@ -59,30 +55,28 @@
     const e=document.getElementById('lerr'),btn=document.getElementById('lbtn');
     e.textContent='';
     const u=document.getElementById('lu').value,p=document.getElementById('lp').value;
-    if(!u||!p){e.textContent='// Enter your username and password';return;}
-    btn.innerHTML='<span class="spin"></span>AUTHENTICATING...';btn.disabled=true;
+    if(!u||!p){e.textContent='Enter your callsign and password.';return;}
+    btn.innerHTML='<span class="spin"></span>Signing in…';btn.disabled=true;
     try {
       const r = await DM.auth.login(u, p);
       if (r.ok) {
         try { localStorage.setItem('dm_last_user', u); } catch(_) {}
         location.href = 'map.html';
       } else {
-        e.textContent = '// ' + r.err;
-        btn.textContent = 'GAIN ACCESS';
+        e.textContent = r.err;
+        btn.textContent = 'Sign In';
         btn.disabled = false;
-        // Keep username, clear pw for retry
         document.getElementById('lp').value = '';
         document.getElementById('lp').focus();
       }
     } catch (err) {
       console.error('Unexpected login error:', err);
-      e.textContent = '// Unexpected error — check console';
-      btn.textContent = 'GAIN ACCESS';
+      e.textContent = 'Something went wrong — check the console.';
+      btn.textContent = 'Sign In';
       btn.disabled = false;
     }
   }
 
-  // Password visibility toggle
   const pwInput = document.getElementById('lp');
   const pwBtn = document.getElementById('pw-toggle');
   if (pwBtn && pwInput) {
@@ -93,6 +87,5 @@
     };
   }
 </script>
-<style>@keyframes rot{to{transform:rotate(360deg);}}</style>
 </body>
 </html>
