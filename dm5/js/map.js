@@ -854,7 +854,7 @@ DM.map = (() => {
       const s   = strks[m.min_access_level] || strks[1];
 
       div.innerHTML = `<div class="mpin">
-        <svg viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 30 39" xmlns="http://www.w3.org/2000/svg">
           <path d="M15 1C7.3 1 1 7.3 1 15c0 11 14 24 14 24S29 26 29 15C29 7.3 22.7 1 15 1z" fill="white"/>
           <path d="M15 2.5C8.1 2.5 2.5 8.1 2.5 15c0 10.2 12.5 22 12.5 22s12.5-11.8 12.5-22c0-6.9-5.6-12.5-12.5-12.5z" fill="${f}" stroke="${s}" stroke-width="1.8"/>
           <text x="15" y="18" text-anchor="middle" dominant-baseline="middle" font-size="11" font-family="Arial" font-weight="bold">${ico}</text>
