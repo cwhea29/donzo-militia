@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#9a8456">
+<title>Donzo — Admin Panel</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/DM_2.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pg">
+<div class="pc">
+
+  <div class="ph">
+    <div class="ph-main">
+      <div class="pt">Admin Panel</div>
+      <div class="ps">Add the items that appear on the Storage page, and review or export the full storage activity log.</div>
+    </div>
+    <div class="pv">LEVEL 7+</div>
+  </div>
+
+  <div class="psec">
+    <div class="account-card">
+      <div class="account-card-title">Storage Items</div>
+      <div class="ps" style="margin:0 0 16px;font-size:13px;">New item names added here become selectable on the Storage page.</div>
+
+      <div class="store-form">
+        <div class="fg" style="flex:1;">
+          <label for="admin-item-name">New Item Name</label>
+          <input type="text" id="admin-item-name" maxlength="80" placeholder="e.g. Lockpick, Body Armor, Ammo Box"
+                 onkeydown="if(event.key==='Enter'){DM.admin.addItem();}">
+        </div>
+        <div class="store-actions" style="align-items:flex-end;">
+          <button type="button" class="btn btn-primary btn-sm" id="admin-add-btn" onclick="DM.admin.addItem()">＋ Add Item</button>
+        </div>
+      </div>
+      <div class="account-status" id="admin-item-status"></div>
+
+      <div id="admin-items-wrap" style="margin-top:18px;">
+        <div class="audit-loading">// LOADING ITEMS...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="audit-toolbar">
+      <div class="audit-toolbar-meta">
+        <span class="account-card-title" style="margin:0;padding:0;border:0;">Storage Activity Log</span>
+        <span class="audit-count" id="admin-log-count">—</span>
+      </div>
+      <div class="store-actions">
+        <button class="btn btn-ghost btn-sm" id="admin-export-btn" type="button" onclick="DM.admin.exportCsv()">⬇ Export CSV</button>
+        <button class="btn btn-ghost btn-sm" id="admin-log-refresh-btn" type="button" onclick="DM.admin.loadLog()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="admin-log-wrap">
+      <div class="audit-loading">// LOADING ACTIVITY LOG...</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="admin-toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/db.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  initDB();
+  DM.nav.init();
+  DM.admin.init();
+</script>
+</body>
+</html>

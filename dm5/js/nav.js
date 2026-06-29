@@ -9,8 +9,14 @@ DM.nav = (() => {
 
   function getPages(user) {
     const pages = [...BASE_PAGES];
+    if (user.level >= 2) {
+      pages.push({ href:'storage.html', label:'STORAGE', icon:'📦' });
+    }
     if (user.level >= 11) {
       pages.push({ href:'audit-log.html', label:'AUDIT LOG', icon:'📜' });
+    }
+    if (user.level >= 7) {
+      pages.push({ href:'admin.html', label:'ADMIN PANEL', icon:'🛠️' });
     }
     return pages;
   }
