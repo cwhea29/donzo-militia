@@ -583,6 +583,12 @@ body.pg::after {
 .audit-loading, .audit-empty, .audit-error { padding: 28px 20px; text-align: center; font-family: var(--font-m); font-size: 12px; letter-spacing: 1px; color: var(--muted); background: var(--panel); border: 1px solid var(--border); }
 .audit-error { color: #e07070; }
 
+/* Storage + Admin Panel */
+.store-form { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.store-form .fg { flex: 1; min-width: 200px; margin-bottom: 0; }
+.store-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.store-qty-cell { font-family: var(--font-m); color: var(--tan-lt); text-align: right; white-space: nowrap; }
+
 .cs { background: var(--panel); border: 1px dashed var(--border); padding: 48px 28px; text-align: left; max-width: 480px; margin: 0 auto; }
 .csico { font-size: 28px; opacity: .4; margin-bottom: 14px; }
 .csttl { font-family: var(--font-h); font-size: 22px; font-weight: 600; letter-spacing: .5px; color: var(--text-dim); margin-bottom: 8px; }

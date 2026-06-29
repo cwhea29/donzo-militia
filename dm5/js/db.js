@@ -435,7 +435,145 @@ DM.db = (() => {
     if (error) throw new Error(error.message);
   }
 
-  return { 
+  // ── STORAGE ──────────────────────────────────────────────
+  const STORAGE_MIN_LEVEL = 2; // view + add/remove stock
+  const STORAGE_ADMIN_LEVEL = 7; // manage item names
+
+  function assertStorageAccess(user) {
+    if (!user || user.level < STORAGE_MIN_LEVEL) {
+      throw new Error('Insufficient access level for Storage');
+    }
+  }
+
+  function assertStorageAdmin(user) {
+    if (!user || user.level < STORAGE_ADMIN_LEVEL) {
+      throw new Error('Admin Panel restricted to level 7+');
+    }
+  }
+
+  async function logStorageAudit(entry) {
+    await dmDB.from('storage_audit_log').insert(entry);
+  }
+
+  async function getStorageItems() {
+    const { data, error } = await dmDB
+      .from('storage_items')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  // Admin: register a new selectable item name (starts at quantity 0).
+  async function addStorageItemName(user, name) {
+    assertStorageAdmin(user);
+    const clean = (name || '').trim();
+    if (!clean) throw new Error('Item name is required');
+    if (clean.length > 80) throw new Error('Item name too long (max 80 chars)');
+
+    const { data: ex } = await dmDB
+      .from('storage_items')
+      .select('id')
+      .ilike('name', clean)
+      .limit(1);
+    if (ex && ex.length) throw new Error('An item with that name already exists');
+
+    const { data, error } = await dmDB
+      .from('storage_items')
+      .insert({ name: clean, quantity: 0, created_by: user.username })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+
+    await logStorageAudit({
+      item_id: data.id,
+      item_name: data.name,
+      action: 'create_item',
+      quantity: null,
+      balance_after: 0,
+      performed_by: user.username,
+      performed_level: user.level
+    });
+    return data;
+  }
+
+  // Admin: remove an item name entirely from the catalog.
+  async function deleteStorageItemName(user, itemId) {
+    assertStorageAdmin(user);
+    const { data: item, error: fetchErr } = await dmDB
+      .from('storage_items')
+      .select('*')
+      .eq('id', itemId)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!item) throw new Error('Item not found');
+
+    const { error } = await dmDB.from('storage_items').delete().eq('id', itemId);
+    if (error) throw new Error(error.message);
+
+    await logStorageAudit({
+      item_id: null,
+      item_name: item.name,
+      action: 'delete_item',
+      quantity: null,
+      balance_after: null,
+      performed_by: user.username,
+      performed_level: user.level
+    });
+  }
+
+  // Storage page: add or remove a quantity of an existing item.
+  // direction is 'add' or 'remove'.
+  async function adjustStorageStock(user, itemId, direction, amount) {
+    assertStorageAccess(user);
+    const qty = parseInt(amount, 10);
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error('Enter a quantity of 1 or more');
+    if (direction !== 'add' && direction !== 'remove') throw new Error('Invalid action');
+
+    const { data: item, error: fetchErr } = await dmDB
+      .from('storage_items')
+      .select('*')
+      .eq('id', itemId)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!item) throw new Error('Item not found — refresh and try again');
+
+    const delta = direction === 'add' ? qty : -qty;
+    const nextQty = item.quantity + delta;
+    if (nextQty < 0) {
+      throw new Error(`Only ${item.quantity} in storage — cannot remove ${qty}`);
+    }
+
+    const { error } = await dmDB
+      .from('storage_items')
+      .update({ quantity: nextQty })
+      .eq('id', itemId);
+    if (error) throw new Error(error.message);
+
+    await logStorageAudit({
+      item_id: item.id,
+      item_name: item.name,
+      action: direction,
+      quantity: qty,
+      balance_after: nextQty,
+      performed_by: user.username,
+      performed_level: user.level
+    });
+
+    return { ...item, quantity: nextQty };
+  }
+
+  async function getStorageAuditLog(limit = 200) {
+    const { data, error } = await dmDB
+      .from('storage_audit_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  return {
     uploadImage,
     getMarkerImages,
     MAX_MARKER_IMAGES,
@@ -472,6 +610,12 @@ DM.db = (() => {
     // Bug Reports
     reportBug,
     getBugReports,
-    deleteBugReport
+    deleteBugReport,
+    // Storage
+    getStorageItems,
+    addStorageItemName,
+    deleteStorageItemName,
+    adjustStorageStock,
+    getStorageAuditLog
   };
 })();
